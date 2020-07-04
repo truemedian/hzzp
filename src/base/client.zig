@@ -15,15 +15,15 @@ fn stripCarriageReturn(buffer: []u8) []u8 {
     }
 }
 
-pub fn create(buffer: []u8, reader: var, writer: var) HzzpClient(@TypeOf(reader), @TypeOf(writer)) {
+pub fn create(buffer: []u8, reader: var, writer: var) BaseClient(@TypeOf(reader), @TypeOf(writer)) {
     assert(@typeInfo(@TypeOf(reader)) == .Pointer);
     assert(@typeInfo(@TypeOf(writer)) == .Pointer);
     assert(buffer.len >= 32);
 
-    return HzzpClient(@TypeOf(reader), @TypeOf(writer)).init(buffer, reader, writer);
+    return BaseClient(@TypeOf(reader), @TypeOf(writer)).init(buffer, reader, writer);
 }
 
-pub fn HzzpClient(comptime Reader: type, comptime Writer: type) type {
+pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
     const ReaderError = @typeInfo(Reader).Pointer.child.Error;
     const WriterError = @typeInfo(Writer).Pointer.child.Error;
 
