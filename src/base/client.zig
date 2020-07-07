@@ -144,7 +144,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             }
         }
 
-        pub const ReadError = ReadUntilError || fmt.ParseUnsignedError;
+        pub const ReadError = ReadUntilError || fmt.ParseIntError;
         pub fn readEvent(self: *Self) ReadError!ClientEvent {
             switch (self.state) {
                 .initial => {
@@ -207,7 +207,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                             return ClientEvent.head_complete;
                         }
 
-                        var separator = blk: {
+                        const separator = blk: {
                             if (mem.indexOfScalar(u8, buffer, ':')) |pos| {
                                 break :blk pos;
                             } else {
@@ -236,8 +236,8 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                             }
                         }
 
-                        var name = buffer[0..separator];
-                        var value = stripCarriageReturn(buffer[index..]);
+                        const name = buffer[0..separator];
+                        const value = stripCarriageReturn(buffer[index..]);
 
                         if (ascii.eqlIgnoreCase(name, "content-length")) {
                             self.recv_encoding = .length;
@@ -268,10 +268,10 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                             return ClientEvent.end;
                         },
                         .length => {
-                            var left = self.enc_need - self.enc_read;
+                            const left = self.enc_need - self.enc_read;
 
                             if (left <= self.read_buffer.len) {
-                                var read_len = try self.reader.readAll(self.read_buffer[0..left]);
+                                const read_len = try self.reader.readAll(self.read_buffer[0..left]);
                                 if (read_len != left) return ClientEvent.closed;
 
                                 self.done = true;
@@ -282,7 +282,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                                     },
                                 };
                             } else {
-                                var read_len = try self.reader.read(self.read_buffer);
+                                const read_len = try self.reader.read(self.read_buffer);
                                 if (read_len == 0) return ClientEvent.closed;
 
                                 self.enc_read += read_len;
@@ -297,7 +297,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                         .chunked => {
                             if (self.enc_need == 0) {
                                 if (try self.readUntilDelimiterOrEof(self.read_buffer, '\n')) |buffer| {
-                                    var chunk_len = try fmt.parseInt(usize, stripCarriageReturn(buffer), 16);
+                                    const chunk_len = try fmt.parseInt(usize, stripCarriageReturn(buffer), 16);
 
                                     if (chunk_len == 0) {
                                         try self.skipUntilDelimiterOrEof('\n');
@@ -305,7 +305,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                                         self.done = true;
                                         return ClientEvent.end;
                                     } else if (chunk_len <= self.read_buffer.len) {
-                                        var read_len = try self.reader.readAll(self.read_buffer[0..chunk_len]);
+                                        const read_len = try self.reader.readAll(self.read_buffer[0..chunk_len]);
                                         if (read_len != chunk_len) return ClientEvent.closed;
 
                                         try self.skipUntilDelimiterOrEof('\n');
@@ -320,7 +320,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                                         self.enc_need = chunk_len;
                                         self.enc_read = 0;
 
-                                        var read_len = try self.reader.read(self.read_buffer);
+                                        const read_len = try self.reader.read(self.read_buffer);
                                         if (read_len != 0) return ClientEvent.closed;
 
                                         self.enc_read += read_len;
@@ -335,10 +335,10 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                                     return ClientEvent.closed;
                                 }
                             } else {
-                                var left = self.enc_need - self.enc_read;
+                                const left = self.enc_need - self.enc_read;
 
                                 if (left <= self.read_buffer.len) {
-                                    var read_len = try self.reader.readAll(self.read_buffer[0..left]);
+                                    const read_len = try self.reader.readAll(self.read_buffer[0..left]);
                                     if (read_len != left) return ClientEvent.closed;
 
                                     try self.skipUntilDelimiterOrEof('\n');
@@ -353,7 +353,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                                         },
                                     };
                                 } else {
-                                    var read_len = try self.reader.read(self.read_buffer);
+                                    const read_len = try self.reader.read(self.read_buffer);
                                     if (read_len == 0) return ClientEvent.closed;
 
                                     self.enc_read += read_len;
