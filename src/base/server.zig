@@ -146,7 +146,9 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
         }
 
         pub const ReadError = ReadUntilError || fmt.ParseIntError;
-        pub fn readEvent(self: *Self) ReadError!ServerEvent {
+        pub fn readEvent(self: *Self) ReadError!?ServerEvent {
+            if (self.done) return null;
+
             switch (self.state) {
                 .initial => {
                     if (try self.readUntilDelimiterOrEof(self.read_buffer, ' ')) |method| {
@@ -252,12 +254,9 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                     }
                 },
                 .payload => {
-                    if (self.done) return ServerEvent.end;
-
                     switch (self.recv_encoding) {
                         .unknown => {
                             self.done = true;
-
                             return ServerEvent.end;
                         },
                         .length => {
@@ -389,7 +388,7 @@ test "decodes a simple response" {
 
     var header1 = try client.readEvent();
     testing.expect(header1 == .header and mem.eql(u8, header1.header.name, "Host") and mem.eql(u8, header1.header.value, "localhost"));
-    
+
     var header2 = try client.readEvent();
     testing.expect(header2 == .header and mem.eql(u8, header2.header.name, "Content-Length") and mem.eql(u8, header2.header.value, "4"));
 
@@ -423,7 +422,7 @@ test "decodes a chunked response" {
 
     var header1 = try client.readEvent();
     testing.expect(header1 == .header and mem.eql(u8, header1.header.name, "Host") and mem.eql(u8, header1.header.value, "localhost"));
-    
+
     var header2 = try client.readEvent();
     testing.expect(header2 == .header and mem.eql(u8, header2.header.name, "Transfer-Encoding") and mem.eql(u8, header2.header.value, "chunked"));
 

@@ -145,7 +145,9 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
         }
 
         pub const ReadError = ReadUntilError || fmt.ParseIntError;
-        pub fn readEvent(self: *Self) ReadError!ClientEvent {
+        pub fn readEvent(self: *Self) ReadError!?ClientEvent {
+            if (self.done) return null;
+
             switch (self.state) {
                 .initial => {
                     if (try self.readUntilDelimiterOrEof(self.read_buffer, ' ')) |buffer| {
@@ -259,8 +261,6 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                     }
                 },
                 .payload => {
-                    if (self.done) return ClientEvent.end;
-
                     switch (self.recv_encoding) {
                         .unknown => {
                             self.done = true;
