@@ -15,7 +15,7 @@ fn stripCarriageReturn(buffer: []u8) []u8 {
     }
 }
 
-pub fn create(buffer: []u8, reader: var, writer: var) BaseServer(@TypeOf(reader), @TypeOf(writer)) {
+pub fn create(buffer: []u8, reader: anytype, writer: anytype) BaseServer(@TypeOf(reader), @TypeOf(writer)) {
     assert(@typeInfo(@TypeOf(reader)) == .Pointer);
     assert(@typeInfo(@TypeOf(writer)) == .Pointer);
     assert(buffer.len >= 32);
@@ -266,7 +266,8 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                                 const read_len = try self.reader.readAll(self.read_buffer[0..left]);
                                 if (read_len != left) return ServerEvent.closed;
 
-                                self.done = true;
+                                self.recv_encoding = .unknown;
+                                
                                 return ServerEvent{
                                     .chunk = .{
                                         .data = self.read_buffer[0..read_len],
@@ -382,23 +383,23 @@ test "decodes a simple response" {
     try client.writeHeader("Content-Length", "9");
     try client.writeChunk("aaabbbccc");
 
-    var status = try client.readEvent();
+    var status = (try client.readEvent()).?;
     testing.expect(status == .status and mem.eql(u8, status.status.method, "GET"));
     testing.expect(status == .status and mem.eql(u8, status.status.path, "/"));
 
-    var header1 = try client.readEvent();
+    var header1 = (try client.readEvent()).?;
     testing.expect(header1 == .header and mem.eql(u8, header1.header.name, "Host") and mem.eql(u8, header1.header.value, "localhost"));
 
-    var header2 = try client.readEvent();
+    var header2 = (try client.readEvent()).?;
     testing.expect(header2 == .header and mem.eql(u8, header2.header.name, "Content-Length") and mem.eql(u8, header2.header.value, "4"));
 
-    var complete = try client.readEvent();
+    var complete = (try client.readEvent()).?;
     testing.expect(complete == .head_complete);
 
-    var body = try client.readEvent();
+    var body = (try client.readEvent()).?;
     testing.expect(body == .chunk and mem.eql(u8, body.chunk.data, "good") and body.chunk.final);
 
-    var end = try client.readEvent();
+    var end = (try client.readEvent()).?;
     testing.expect(end == .end);
 }
 
@@ -416,23 +417,23 @@ test "decodes a chunked response" {
     try client.writeHeader("Content-Length", "9");
     try client.writeChunk("aaabbbccc");
 
-    var status = try client.readEvent();
+    var status = (try client.readEvent()).?;
     testing.expect(status == .status and mem.eql(u8, status.status.method, "GET"));
     testing.expect(status == .status and mem.eql(u8, status.status.path, "/"));
 
-    var header1 = try client.readEvent();
+    var header1 = (try client.readEvent()).?;
     testing.expect(header1 == .header and mem.eql(u8, header1.header.name, "Host") and mem.eql(u8, header1.header.value, "localhost"));
 
-    var header2 = try client.readEvent();
+    var header2 = (try client.readEvent()).?;
     testing.expect(header2 == .header and mem.eql(u8, header2.header.name, "Transfer-Encoding") and mem.eql(u8, header2.header.value, "chunked"));
 
-    var complete = try client.readEvent();
+    var complete = (try client.readEvent()).?;
     testing.expect(complete == .head_complete);
 
-    var body = try client.readEvent();
+    var body = (try client.readEvent()).?;
     testing.expect(body == .chunk and mem.eql(u8, body.chunk.data, "good") and body.chunk.final);
 
-    var end = try client.readEvent();
+    var end = (try client.readEvent()).?;
     testing.expect(end == .end);
 }
 
