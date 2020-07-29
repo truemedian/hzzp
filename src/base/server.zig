@@ -16,16 +16,14 @@ fn stripCarriageReturn(buffer: []u8) []u8 {
 }
 
 pub fn create(buffer: []u8, reader: anytype, writer: anytype) BaseServer(@TypeOf(reader), @TypeOf(writer)) {
-    assert(@typeInfo(@TypeOf(reader)) == .Pointer);
-    assert(@typeInfo(@TypeOf(writer)) == .Pointer);
     assert(buffer.len >= 32);
 
     return BaseServer(@TypeOf(reader), @TypeOf(writer)).init(buffer, reader, writer);
 }
 
 pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
-    const ReaderError = @typeInfo(Reader).Pointer.child.Error;
-    const WriterError = @typeInfo(Writer).Pointer.child.Error;
+    const ReaderError = if (@typeInfo(Reader) == .Pointer) @typeInfo(Reader).Pointer.child.Error else Reader.Error;
+    const WriterError = if (@typeInfo(Writer) == .Pointer) @typeInfo(Writer).Pointer.child.Error else Writer.Error;
 
     return struct {
         const Self = @This();
@@ -377,7 +375,7 @@ test "decodes a simple response" {
     var reader = io.fixedBufferStream(response).reader();
     var writer = io.fixedBufferStream(&the_void).writer();
 
-    var client = create(&read_buffer, &reader, &writer);
+    var client = create(&read_buffer, reader, writer);
 
     try client.writeHead(200, "OK");
     try client.writeHeader("Content-Length", "9");
@@ -411,7 +409,7 @@ test "decodes a chunked response" {
     var reader = io.fixedBufferStream(response).reader();
     var writer = io.fixedBufferStream(&the_void).writer();
 
-    var client = create(&read_buffer, &reader, &writer);
+    var client = create(&read_buffer, reader, writer);
 
     try client.writeHead(200, "OK");
     try client.writeHeader("Content-Length", "9");
