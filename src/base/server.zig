@@ -152,6 +152,7 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                     if (try self.readUntilDelimiterOrEof(self.read_buffer, ' ')) |method| {
                         for (method) |c| {
                             if (!ascii.isAlpha(c) or !ascii.isUpper(c)) {
+                                self.done = true;
                                 return ServerEvent{
                                     .invalid = .{
                                         .buffer = method,
@@ -164,11 +165,13 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
 
                         if (try self.readUntilDelimiterOrEof(self.read_buffer[method.len..], ' ')) |path| {
                             if (try self.readUntilDelimiterOrEof(self.read_buffer[method.len + path.len ..], '\n')) |buffer| {
-                                if (!mem.eql(u8, stripCarriageReturn(buffer), "HTTP/1.1")) {
+                                const stripped = stripCarriageReturn(buffer);
+                                if (!mem.eql(u8, stripped, "HTTP/1.1") and !mem.eql(u8, stripped, "HTTP/1.0")) {
+                                    self.done = true;
                                     return ServerEvent{
                                         .invalid = .{
                                             .buffer = buffer,
-                                            .message = "expected HTTP/1.1",
+                                            .message = "expected HTTP/1.1 or HTTP/1.0",
                                             .state = self.state,
                                         },
                                     };
@@ -204,6 +207,7 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                             if (mem.indexOfScalar(u8, buffer, ':')) |pos| {
                                 break :blk pos;
                             } else {
+                                self.done = true;
                                 return ServerEvent{
                                     .invalid = .{
                                         .buffer = buffer,
@@ -219,6 +223,7 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                         while (true) : (index += 1) {
                             if (buffer[index] != ' ') break;
                             if (index >= buffer[index]) {
+                                self.done = true;
                                 return ServerEvent{
                                     .invalid = .{
                                         .buffer = buffer,

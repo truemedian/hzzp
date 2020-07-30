@@ -149,11 +149,12 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             switch (self.state) {
                 .initial => {
                     if (try self.readUntilDelimiterOrEof(self.read_buffer, ' ')) |buffer| {
-                        if (!mem.eql(u8, buffer, "HTTP/1.1")) {
+                        if (!mem.eql(u8, buffer, "HTTP/1.1") and !mem.eql(u8, buffer, "HTTP/1.0")) {
+                            self.done = true;
                             return ClientEvent{
                                 .invalid = .{
                                     .buffer = buffer,
-                                    .message = "expected HTTP/1.1",
+                                    .message = "expected HTTP/1.1 or HTTP/1.0",
                                     .state = self.state,
                                 },
                             };
@@ -164,7 +165,8 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
 
                     var code: u16 = 0;
                     if (try self.readUntilDelimiterOrEof(self.read_buffer, ' ')) |buffer| {
-                        if (buffer.len != 3)
+                        if (buffer.len != 3) {
+                            self.done = true;
                             return ClientEvent{
                                 .invalid = Invalid{
                                     .buffer = buffer,
@@ -172,10 +174,12 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                                     .state = self.state,
                                 },
                             };
+                        }
 
                         code = try fmt.parseUnsigned(u16, buffer, 10);
 
-                        if (code < 100 or code >= 600)
+                        if (code < 100 or code >= 600) {
+                            self.done = true;
                             return ClientEvent{
                                 .invalid = Invalid{
                                     .buffer = buffer,
@@ -183,6 +187,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                                     .state = self.state,
                                 },
                             };
+                        }
                     } else {
                         return ClientEvent.closed;
                     }
@@ -211,6 +216,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                             if (mem.indexOfScalar(u8, buffer, ':')) |pos| {
                                 break :blk pos;
                             } else {
+                                self.done = true;
                                 return ClientEvent{
                                     .invalid = .{
                                         .buffer = buffer,
@@ -226,6 +232,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                         while (true) : (index += 1) {
                             if (buffer[index] != ' ') break;
                             if (index >= buffer[index]) {
+                                self.done = true;
                                 return ClientEvent{
                                     .invalid = .{
                                         .buffer = buffer,
