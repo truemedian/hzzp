@@ -45,7 +45,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
         state: ParserState = .initial,
 
         pub fn init(buffer: []u8, reader: Reader, writer: Writer) Self {
-            return Self{
+            return .{
                 .read_buffer = buffer,
                 .reader = reader,
                 .writer = writer,
@@ -98,7 +98,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             switch (self.send_encoding) {
                 .chunked => {
                     if (data) |payload| {
-                        try fmt.formatInt(payload.len, 16, true, fmt.FormatOptions{}, self.writer);
+                        try fmt.formatInt(payload.len, 16, true, .{}, self.writer);
                         try self.writer.writeAll("\r\n");
                         try self.writer.writeAll(payload);
                         try self.writer.writeAll("\r\n");

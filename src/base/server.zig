@@ -45,7 +45,7 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
         state: ParserState = .initial,
 
         pub fn init(buffer: []u8, reader: Reader, writer: Writer) Self {
-            return Self{
+            return .{
                 .read_buffer = buffer,
                 .reader = reader,
                 .writer = writer,
