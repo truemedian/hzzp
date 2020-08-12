@@ -18,7 +18,7 @@ jobs:
         submodules: true
     - name: Install zig
       run: |
-        tarball=$(wget --quiet --output-document=- https://ziglang.corg/download/index.json | jq --raw-output '.master."x86_64-linux".tarball')
+        tarball=$(wget --quiet --output-document=- https://ziglang.org/download/index.json | jq --raw-output '.master."x86_64-linux".tarball')
         
         echo "Installing $tarball into $(pwd)/zig/"
 
