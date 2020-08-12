@@ -5,7 +5,7 @@ const mem = std.mem;
 
 const assert = std.debug.assert;
 
-pub usingnamespace @import("events.zig");
+usingnamespace @import("common.zig");
 
 fn stripCarriageReturn(buffer: []u8) []u8 {
     if (buffer[buffer.len - 1] == '\r') {
@@ -15,13 +15,13 @@ fn stripCarriageReturn(buffer: []u8) []u8 {
     }
 }
 
-pub fn create(buffer: []u8, reader: anytype, writer: anytype) BaseClient(@TypeOf(reader), @TypeOf(writer)) {
+pub fn create(buffer: []u8, reader: anytype, writer: anytype) Client(@TypeOf(reader), @TypeOf(writer)) {
     assert(buffer.len >= 32);
 
-    return BaseClient(@TypeOf(reader), @TypeOf(writer)).init(buffer, reader, writer);
+    return Client(@TypeOf(reader), @TypeOf(writer)).init(buffer, reader, writer);
 }
 
-pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
+pub fn Client(comptime Reader: type, comptime Writer: type) type {
     const ReaderError = if (@typeInfo(Reader) == .Pointer) @typeInfo(Reader).Pointer.child.Error else Reader.Error;
     const WriterError = if (@typeInfo(Writer) == .Pointer) @typeInfo(Writer).Pointer.child.Error else Writer.Error;
 
@@ -72,17 +72,27 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             try self.writer.writeAll(" HTTP/1.1\r\n");
         }
 
-        pub fn writeHeader(self: *Self, key: []const u8, value: []const u8) WriterError!void {
-            if (ascii.eqlIgnoreCase(key, "transfer-encoding")) {
+        pub fn writeHeaderValue(self: *Self, name: []const u8, value: []const u8) WriterError!void {
+            if (ascii.eqlIgnoreCase(name, "transfer-encoding")) {
                 self.send_encoding = .chunked;
-            } else if (ascii.eqlIgnoreCase(key, "content-length")) {
+            } else if (ascii.eqlIgnoreCase(name, "content-length")) {
                 self.send_encoding = .length;
             }
 
-            try self.writer.writeAll(key);
+            try self.writer.writeAll(name);
             try self.writer.writeAll(": ");
             try self.writer.writeAll(value);
             try self.writer.writeAll("\r\n");
+        }
+
+        pub fn writeHeader(self: *Self, header: Header) WriterError!void {
+            return self.writeHeaderValue(header.name, header.value);
+        }
+
+        pub fn writeHeaders(self: *Self, array: Headers) WriterError!void {
+            for (array) |header| {
+                try writeHeaderValue(header.name, header.value);
+            }
         }
 
         pub fn writeHeadComplete(self: *Self) WriterError!void {
@@ -168,7 +178,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                         if (buffer.len != 3) {
                             self.done = true;
                             return ClientEvent{
-                                .invalid = Invalid{
+                                .invalid = .{
                                     .buffer = buffer,
                                     .message = "expected response code to be 3 digits",
                                     .state = self.state,
@@ -181,7 +191,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                         if (code < 100 or code >= 600) {
                             self.done = true;
                             return ClientEvent{
-                                .invalid = Invalid{
+                                .invalid = .{
                                     .buffer = buffer,
                                     .message = "expected response code to be in range 100 -> 599",
                                     .state = self.state,
@@ -280,7 +290,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                                 if (read_len != left) return ClientEvent.closed;
 
                                 self.recv_encoding = .unknown;
-                                
+
                                 return ClientEvent{
                                     .chunk = .{
                                         .data = self.read_buffer[0..read_len],
@@ -393,7 +403,7 @@ test "decodes a simple response" {
     var client = create(&read_buffer, reader, writer);
 
     try client.writeHead("GET", "/");
-    try client.writeHeader("Host", "localhost");
+    try client.writeHeaderValue("Host", "localhost");
     try client.writeChunk("aaabbbccc");
 
     var status = (try client.readEvent()).?;
@@ -423,7 +433,7 @@ test "decodes a chunked response" {
     var client = create(&read_buffer, reader, writer);
 
     try client.writeHead("GET", "/");
-    try client.writeHeader("Host", "localhost");
+    try client.writeHeader(.{ .name = "Host", .value = "localhost" });
     try client.writeChunk("aaabbbccc");
 
     var status = (try client.readEvent()).?;

@@ -5,7 +5,7 @@ const mem = std.mem;
 
 const assert = std.debug.assert;
 
-pub usingnamespace @import("events.zig");
+usingnamespace @import("common.zig");
 
 fn stripCarriageReturn(buffer: []u8) []u8 {
     if (buffer[buffer.len - 1] == '\r') {
@@ -73,17 +73,27 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
             try self.writer.writeAll("\r\n");
         }
 
-        pub fn writeHeader(self: *Self, key: []const u8, value: []const u8) WriterError!void {
-            if (ascii.eqlIgnoreCase(key, "transfer-encoding")) {
+        pub fn writeHeaderValue(self: *Self, name: []const u8, value: []const u8) WriterError!void {
+            if (ascii.eqlIgnoreCase(name, "transfer-encoding")) {
                 self.send_encoding = .chunked;
-            } else if (ascii.eqlIgnoreCase(key, "content-length")) {
+            } else if (ascii.eqlIgnoreCase(name, "content-length")) {
                 self.send_encoding = .length;
             }
 
-            try self.writer.writeAll(key);
+            try self.writer.writeAll(name);
             try self.writer.writeAll(": ");
             try self.writer.writeAll(value);
             try self.writer.writeAll("\r\n");
+        }
+
+        pub fn writeHeader(self: *Self, header: Header) WriterError!void {
+            return self.writeHeaderValue(header.name, header.value);
+        }
+
+        pub fn writeHeaders(self: *Self, array: Headers) WriterError!void {
+            for (array) |header| {
+                try writeHeaderValue(header.name, header.value);
+            }
         }
 
         pub fn writeHeadComplete(self: *Self) WriterError!void {
@@ -383,7 +393,7 @@ test "decodes a simple response" {
     var client = create(&read_buffer, reader, writer);
 
     try client.writeHead(200, "OK");
-    try client.writeHeader("Content-Length", "9");
+    try client.writeHeaderValue("Content-Length", "9");
     try client.writeChunk("aaabbbccc");
 
     var status = (try client.readEvent()).?;
@@ -417,7 +427,7 @@ test "decodes a chunked response" {
     var client = create(&read_buffer, reader, writer);
 
     try client.writeHead(200, "OK");
-    try client.writeHeader("Content-Length", "9");
+    try client.writeHeader(.{ .name = "Content-Length", .value = "9" });
     try client.writeChunk("aaabbbccc");
 
     var status = (try client.readEvent()).?;

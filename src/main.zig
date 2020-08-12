@@ -1,7 +1,6 @@
 const std = @import("std");
 
-pub const BaseClient = @import("base/client.zig");
-pub const BaseServer = @import("base/server.zig");
+pub const base = @import("base/base.zig");
 
 test "refAllDecls" {
     std.meta.refAllDecls(@This());

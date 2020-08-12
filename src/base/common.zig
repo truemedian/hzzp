@@ -20,17 +20,14 @@ pub const RequestStatus = struct {
     path: []const u8,
 };
 
-pub const Header = struct {
-    name: []const u8,
-    value: []const u8,
-};
+pub const HeaderEvent = Header;
 
-pub const Chunk = struct {
+pub const ChunkEvent = struct {
     data: []const u8,
     final: bool = false,
 };
 
-pub const Invalid = struct {
+pub const InvalidEvent = struct {
     buffer: []const u8,
     message: []const u8,
     state: ParserState,
@@ -38,20 +35,27 @@ pub const Invalid = struct {
 
 pub const ClientEvent = union(enum) {
     status: ResponseStatus,
-    header: Header,
+    header: HeaderEvent,
     head_complete: void,
-    chunk: Chunk,
+    chunk: ChunkEvent,
     end: void,
-    invalid: Invalid,
+    invalid: InvalidEvent,
     closed: void,
 };
 
 pub const ServerEvent = union(enum) {
     status: RequestStatus,
-    header: Header,
+    header: HeaderEvent,
     head_complete: void,
-    chunk: Chunk,
+    chunk: ChunkEvent,
     end: void,
-    invalid: Invalid,
+    invalid: InvalidEvent,
     closed: void,
 };
+
+pub const Header = struct {
+    name: []const u8,
+    value: []const u8,
+};
+
+pub const Headers = []const Header;
