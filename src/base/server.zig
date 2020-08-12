@@ -280,7 +280,7 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                                 if (read_len != left) return ServerEvent.closed;
 
                                 self.recv_encoding = .unknown;
-                                
+
                                 return ServerEvent{
                                     .chunk = .{
                                         .data = self.read_buffer[0..read_len],
