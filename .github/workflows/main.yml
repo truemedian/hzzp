@@ -22,7 +22,7 @@ jobs:
         
         echo "Installing $tarball into $(pwd)/zig/"
 
-        wget --quiet --output-document=- $tarball | jar Jx
+        wget --quiet --output-document=- $tarball | tar Jx
         mv zig-linux-x86_64-* zig
 
         echo "zig version: $(./zig/zig version)"
