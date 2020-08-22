@@ -9,26 +9,14 @@ on:
     - '**.zig'
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+    - uses: actions/checkout@v2
       with:
         submodules: true
-    - name: Install zig
-      run: |
-        tarball=$(wget --quiet --output-document=- https://ziglang.org/download/index.json | jq --raw-output '.master."x86_64-linux".tarball')
-        
-        echo "Installing $tarball into $(pwd)/zig/"
-
-        wget --quiet --output-document=- $tarball | tar Jx
-        mv zig-linux-x86_64-* zig
-
-        echo "zig version: $(./zig/zig version)"
-
-        git submodule update --init --recursive
+    - uses: goto-bus-stop/setup-zig@v1
+      with:
+        version: master
     - name: Build
-      run: |
-        export PATH=./zig:$PATH
-        zig build test || exit 1
+      run: zig build test
