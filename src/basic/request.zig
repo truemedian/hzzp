@@ -43,8 +43,8 @@ pub fn Request(comptime Reader: type, comptime Writer: type) type {
         sent: bool = false,
         status: RequestStatus,
         headers: std.http.Headers,
-        payload: std.ArrayList(u8),
         payload_index: usize = 0,
+        payload_size: usize = 0,
 
         pub fn init(options: RequestOptions, input: Reader, output: Writer) AllocError!Self {
             var arena = std.heap.ArenaAllocator.init(options.allocator);
@@ -59,7 +59,6 @@ pub fn Request(comptime Reader: type, comptime Writer: type) type {
 
                 .status = undefined,
                 .headers = std.http.Headers.init(&arena.allocator),
-                .payload = std.ArrayList(u8).init(&arena.allocator),
             };
         }
 
@@ -182,7 +181,7 @@ pub fn Request(comptime Reader: type, comptime Writer: type) type {
         }
 
         pub fn readChunkBuffer(self: *Self, dest: []u8) ReadChunkError!usize {
-            if (self.payload_index >= self.read_buffer.len) {
+            if (self.payload_index >= self.payload_size) {
                 if (try self.internal.readEvent()) |event| {
                     switch (event) {
                         .status, .header, .head_complete => unreachable,
@@ -190,6 +189,7 @@ pub fn Request(comptime Reader: type, comptime Writer: type) type {
                             const size = std.math.min(dest.len, chunk.data.len);
 
                             mem.copy(u8, dest[0..size], chunk.data[0..size]);
+                            self.payload_size = chunk.data.len;
                             self.payload_index = size;
 
                             return size;
@@ -206,7 +206,7 @@ pub fn Request(comptime Reader: type, comptime Writer: type) type {
                 }
             } else {
                 const start = self.payload_index;
-                const size = std.math.min(dest.len, self.read_buffer.len - start);
+                const size = std.math.min(dest.len, self.payload_size - start);
                 const end = start + size;
 
                 mem.copy(u8, dest[0..size], self.read_buffer[start..end]);
@@ -228,8 +228,8 @@ test "test" {
     var the_void: [1024]u8 = undefined;
     var response = "HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\ngood";
 
-    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = std.heap.page_allocator; // &gpa.allocator;
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = &gpa.allocator;
 
     var reader = io.fixedBufferStream(response).reader();
     var writer = io.fixedBufferStream(&the_void).writer();
@@ -245,7 +245,7 @@ test "test" {
     try request.prepare();
     try request.addHeader(.{ .name = "X-Header", .value = "value" });
     try request.addHeaderValue("X-Header-value", "value");
-    try request.addHeaderValueFormat("X-Header-Fmt", "random number: {d}", .{42});
+    try request.addHeaderValueFormat("X-Header-Fmt", "random number={d}", .{42});
     try request.finish();
 
     try request.readRequest();
@@ -254,7 +254,7 @@ test "test" {
     testing.expect(request.status.kind == .success);
 
     var payload_reader = request.payloadReader();
-    var payload = payload_reader.readAllAlloc(allocator, 128);
+    var payload = try payload_reader.readAllAlloc(allocator, 8);
 
-    std.debug.print("{}\n", .{payload});
+    testing.expectEqualStrings("good", payload);
 }
