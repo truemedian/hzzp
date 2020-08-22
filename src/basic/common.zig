@@ -4,7 +4,6 @@ pub const RequestOptions = struct {
     allocator: *std.mem.Allocator,
 
     read_buffer_size: usize = 4 * 1024, // 4 KiB
-    max_buffer_size: usize = 16 * 1024 * 1024, // 16 MiB
 
     method: []const u8,
     path: []const u8,
