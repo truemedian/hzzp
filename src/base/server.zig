@@ -87,6 +87,16 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
             try self.writer.writeAll("\r\n");
         }
 
+        pub fn writeHeaderValueFormat(self: *Self, name: []const u8, comptime format: []const u8, args: anytype) WriterError!void {
+            if (ascii.eqlIgnoreCase(name, "transfer-encoding")) {
+                self.send_encoding = .chunked;
+            } else if (ascii.eqlIgnoreCase(name, "content-length")) {
+                self.send_encoding = .length;
+            }
+
+            try self.writer.print("{s}: " ++ format ++ "\r\n", .{name} ++ args);
+        }
+
         pub fn writeHeader(self: *Self, header: Header) WriterError!void {
             return self.writeHeaderValue(header.name, header.value);
         }
@@ -437,6 +447,7 @@ test "decodes a simple response" {
 
     try client.writeHead(200, "OK");
     try client.writeHeaderValue("Content-Length", "9");
+    try client.writeHeaderValueFormat("Content-Length", "{d}", .{9});
     try client.writeChunk("aaabbbccc");
 
     var status = (try client.readEvent()).?;
