@@ -47,25 +47,27 @@ pub fn Request(comptime Reader: type, comptime Writer: type) type {
         payload_size: usize = 0,
 
         pub fn init(options: RequestOptions, input: Reader, output: Writer) AllocError!Self {
-            var arena = std.heap.ArenaAllocator.init(options.allocator);
-            var buffer = try arena.allocator.alloc(u8, options.read_buffer_size);
+            var buffer = try options.allocator.alloc(u8, options.read_buffer_size);
 
             return Self{
                 .options = options,
-                .arena = arena,
+                .arena = std.heap.ArenaAllocator.init(options.allocator),
 
                 .read_buffer = buffer,
                 .internal = InternalClient.init(buffer, input, output),
 
                 .status = undefined,
-                .headers = std.http.Headers.init(&arena.allocator),
+                .headers = std.http.Headers.init(options.allocator),
             };
         }
 
         pub fn deinit(self: *Self) void {
             self.internal = undefined;
 
+            self.headers.deinit();
             self.arena.deinit();
+
+            self.options.allocator.free(self.read_buffer);
         }
 
         pub fn prepare(self: *Self) SendError!void {
@@ -150,7 +152,7 @@ pub fn Request(comptime Reader: type, comptime Writer: type) type {
                     },
                     .header => |header| {
                         var value = try self.arena.allocator.dupe(u8, header.value);
-                        // try self.headers.append(header.name, value, null); // this call segfaults for some reason
+                        try self.headers.append(header.name, value, null);
                     },
                     .head_complete => break,
                     .end, .closed => return error.ConnectionClosed,
@@ -229,6 +231,8 @@ test "test" {
     var response = "HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\ngood";
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+
     const allocator = &gpa.allocator;
 
     var reader = io.fixedBufferStream(response).reader();
@@ -255,6 +259,7 @@ test "test" {
 
     var payload_reader = request.payloadReader();
     var payload = try payload_reader.readAllAlloc(allocator, 8);
+    defer allocator.free(payload);
 
     testing.expectEqualStrings("good", payload);
 }
