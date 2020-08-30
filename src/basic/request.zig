@@ -230,10 +230,7 @@ test "test" {
     var the_void: [1024]u8 = undefined;
     var response = "HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\ngood";
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-
-    const allocator = &gpa.allocator;
+    const allocator = testing.allocator;
 
     var reader = io.fixedBufferStream(response).reader();
     var writer = io.fixedBufferStream(&the_void).writer();
