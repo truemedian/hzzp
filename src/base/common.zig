@@ -1,3 +1,7 @@
+const std = @import("std");
+
+pub const log = std.log.scoped(.hzzp);
+
 pub const TransferEncoding = enum {
     length,
     chunked,

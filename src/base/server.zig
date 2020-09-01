@@ -7,21 +7,12 @@ const assert = std.debug.assert;
 
 usingnamespace @import("common.zig");
 
-fn stripCarriageReturn(buffer: []u8) []u8 {
-    if (buffer[buffer.len - 1] == '\r') {
-        return buffer[0 .. buffer.len - 1];
-    } else {
-        return buffer;
-    }
-}
-
 pub fn create(buffer: []u8, reader: anytype, writer: anytype) BaseServer(@TypeOf(reader), @TypeOf(writer)) {
     assert(buffer.len >= 32);
 
     return BaseServer(@TypeOf(reader), @TypeOf(writer)).init(buffer, reader, writer);
 }
 
-const HzzpLogger = std.log.scoped(.hzzp);
 pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
     const ReaderError = if (@typeInfo(Reader) == .Pointer) @typeInfo(Reader).Pointer.child.Error else Reader.Error;
     const WriterError = if (@typeInfo(Writer) == .Pointer) @typeInfo(Writer).Pointer.child.Error else Writer.Error;
@@ -138,22 +129,27 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
 
         var read_byte: [1]u8 = undefined;
         const ReadUntilError = ReaderError || error{BufferOverflow};
-        fn readUntilDelimiterOrEof(self: *Self, buf: []u8, delimiter: u8) ReadUntilError!?[]u8 {
+        fn readUntilDelimiterOrEof(self: *Self, buffer: []u8, comptime delimiter: []const u8) ReadUntilError!?[]u8 {
             var index: usize = 0;
-            while (true) {
+
+            while (index < buffer.len) {
                 const read_len = try self.reader.read(&read_byte);
                 if (read_len < 1) {
-                    if (index == 0) return null;
-                    return buf[0..index];
+                    if (index == 0) return null; // reached end of stream but never got any data, connection closed?
+                    return buffer[0..index]; // reached end of stream but got some data.
                 }
 
-                if (read_byte[0] == delimiter) return buf[0..index];
-                if (index >= buf.len) return error.BufferOverflow;
-
-                buf[index] = read_byte[0];
+                buffer[index] = read_byte[0];
                 index += 1;
+
+                if (index >= delimiter.len and std.mem.eql(u8, buffer[index - delimiter.len .. index], delimiter)) {
+                    return buffer[0 .. index - delimiter.len]; // found the delimiter
+                }
             }
+
+            return error.BufferOverflow;
         }
+
 
         fn skipUntilDelimiterOrEof(self: *Self, delimiter: u8) ReaderError!void {
             while (true) {
@@ -170,10 +166,10 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
 
             switch (self.state) {
                 .initial => {
-                    if (try self.readUntilDelimiterOrEof(self.read_buffer, ' ')) |method| {
+                    if (try self.readUntilDelimiterOrEof(self.read_buffer, " ")) |method| {
                         for (method) |c| {
                             if (!ascii.isAlpha(c) or !ascii.isUpper(c)) {
-                                HzzpLogger.err("found invalid HTTP method: '{s}', expected uppercase only word", .{method});
+                                log.err("found invalid HTTP method: '{s}', expected uppercase only word", .{method});
 
                                 self.done = true;
                                 return ServerEvent{
@@ -186,11 +182,10 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                             }
                         }
 
-                        if (try self.readUntilDelimiterOrEof(self.read_buffer[method.len..], ' ')) |path| {
-                            if (try self.readUntilDelimiterOrEof(self.read_buffer[method.len + path.len ..], '\n')) |buffer| {
-                                const stripped = stripCarriageReturn(buffer);
-                                if (!mem.eql(u8, stripped, "HTTP/1.1") and !mem.eql(u8, stripped, "HTTP/1.0")) {
-                                    HzzpLogger.err("found invalid HTTP version: {s}, expected HTTP/1.1 or HTTP/1.0", .{buffer});
+                        if (try self.readUntilDelimiterOrEof(self.read_buffer[method.len..], " ")) |path| {
+                            if (try self.readUntilDelimiterOrEof(self.read_buffer[method.len + path.len ..], "\r\n")) |buffer| {
+                                if (!mem.eql(u8, buffer, "HTTP/1.1") and !mem.eql(u8, buffer, "HTTP/1.0")) {
+                                    log.err("found invalid HTTP version: {s}, expected HTTP/1.1 or HTTP/1.0", .{buffer});
 
                                     self.done = true;
                                     return ServerEvent{
@@ -211,24 +206,24 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                                     },
                                 };
                             } else {
-                                HzzpLogger.warn("connection closed abruptly while reading message", .{});
+                                log.warn("connection closed abruptly while reading message", .{});
 
                                 return ServerEvent.closed;
                             }
                         } else {
-                            HzzpLogger.warn("connection closed abruptly while reading message", .{});
+                            log.warn("connection closed abruptly while reading message", .{});
 
                             return ServerEvent.closed;
                         }
                     } else {
-                        HzzpLogger.warn("connection closed abruptly while reading message", .{});
+                        log.warn("connection closed abruptly while reading message", .{});
 
                         return ServerEvent.closed;
                     }
                 },
                 .headers => {
-                    if (try self.readUntilDelimiterOrEof(self.read_buffer, '\n')) |buffer| {
-                        if (buffer.len == 1 and buffer[0] == '\r') {
+                    if (try self.readUntilDelimiterOrEof(self.read_buffer, "\r\n")) |buffer| {
+                        if (buffer.len == 0) {
                             self.state = .payload;
 
                             return ServerEvent.head_complete;
@@ -238,7 +233,7 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                             if (mem.indexOfScalar(u8, buffer, ':')) |pos| {
                                 break :blk pos;
                             } else {
-                                HzzpLogger.err("found invalid HTTP header: '{s}', missing ':' separator", .{buffer});
+                                log.err("found invalid HTTP header: '{s}', missing ':' separator", .{buffer});
 
                                 self.done = true;
                                 return ServerEvent{
@@ -256,7 +251,7 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                         while (true) : (index += 1) {
                             if (buffer[index] != ' ') break;
                             if (index >= buffer[index]) {
-                                HzzpLogger.err("found invalid HTTP header: '{s}', missing value after separator", .{buffer});
+                                log.err("found invalid HTTP header: '{s}', missing value after separator", .{buffer});
 
                                 self.done = true;
                                 return ServerEvent{
@@ -270,7 +265,7 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                         }
 
                         const name = buffer[0..separator];
-                        const value = stripCarriageReturn(buffer[index..]);
+                        const value = buffer[index..];
 
                         if (ascii.eqlIgnoreCase(name, "content-length")) {
                             self.recv_encoding = .length;
@@ -288,7 +283,7 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                             },
                         };
                     } else {
-                        HzzpLogger.warn("connection closed abruptly while reading message", .{});
+                        log.warn("connection closed abruptly while reading message", .{});
 
                         return ServerEvent.closed;
                     }
@@ -305,7 +300,7 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                             if (left <= self.read_buffer.len) {
                                 const read_len = try self.reader.readAll(self.read_buffer[0..left]);
                                 if (read_len != left) {
-                                    HzzpLogger.warn("connection closed abruptly while reading message", .{});
+                                    log.warn("connection closed abruptly while reading message", .{});
 
                                     return ServerEvent.closed;
                                 }
@@ -321,7 +316,7 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                             } else {
                                 const read_len = try self.reader.read(self.read_buffer);
                                 if (read_len == 0) {
-                                    HzzpLogger.warn("connection closed abruptly while reading message", .{});
+                                    log.warn("connection closed abruptly while reading message", .{});
 
                                     return ServerEvent.closed;
                                 }
@@ -337,8 +332,8 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                         },
                         .chunked => {
                             if (self.enc_need == 0) {
-                                if (try self.readUntilDelimiterOrEof(self.read_buffer, '\n')) |buffer| {
-                                    const chunk_len = try fmt.parseInt(usize, stripCarriageReturn(buffer), 16);
+                                if (try self.readUntilDelimiterOrEof(self.read_buffer, "\r\n")) |buffer| {
+                                    const chunk_len = try fmt.parseInt(usize, buffer, 16);
 
                                     if (chunk_len == 0) {
                                         try self.skipUntilDelimiterOrEof('\n');
@@ -348,7 +343,7 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                                     } else if (chunk_len <= self.read_buffer.len) {
                                         const read_len = try self.reader.readAll(self.read_buffer[0..chunk_len]);
                                         if (read_len != chunk_len) {
-                                            HzzpLogger.warn("connection closed abruptly while reading message", .{});
+                                            log.warn("connection closed abruptly while reading message", .{});
 
                                             return ServerEvent.closed;
                                         }
@@ -367,7 +362,7 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
 
                                         const read_len = try self.reader.read(self.read_buffer);
                                         if (read_len != 0) {
-                                            HzzpLogger.warn("connection closed abruptly while reading message", .{});
+                                            log.warn("connection closed abruptly while reading message", .{});
 
                                             return ServerEvent.closed;
                                         }
@@ -381,7 +376,7 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                                         };
                                     }
                                 } else {
-                                    HzzpLogger.warn("connection closed abruptly while reading message", .{});
+                                    log.warn("connection closed abruptly while reading message", .{});
 
                                     return ServerEvent.closed;
                                 }
@@ -391,7 +386,7 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                                 if (left <= self.read_buffer.len) {
                                     const read_len = try self.reader.readAll(self.read_buffer[0..left]);
                                     if (read_len != left) {
-                                        HzzpLogger.warn("connection closed abruptly while reading message", .{});
+                                        log.warn("connection closed abruptly while reading message", .{});
 
                                         return ServerEvent.closed;
                                     }
@@ -410,7 +405,7 @@ pub fn BaseServer(comptime Reader: type, comptime Writer: type) type {
                                 } else {
                                     const read_len = try self.reader.read(self.read_buffer);
                                     if (read_len == 0) {
-                                        HzzpLogger.warn("connection closed abruptly while reading message", .{});
+                                        log.warn("connection closed abruptly while reading message", .{});
 
                                         return ServerEvent.closed;
                                     }
