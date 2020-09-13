@@ -126,11 +126,11 @@ pub fn Client(comptime Reader: type, comptime Writer: type) type {
             }
         }
 
-        var read_byte: [1]u8 = undefined;
         const ReadUntilError = ReaderError || error{BufferOverflow};
         fn readUntilDelimiterOrEof(self: *Self, buffer: []u8, comptime delimiter: []const u8) ReadUntilError!?[]u8 {
             var index: usize = 0;
 
+            var read_byte: [1]u8 = undefined;
             while (index < buffer.len) {
                 const read_len = try self.reader.read(&read_byte);
                 if (read_len < 1) {
@@ -150,6 +150,7 @@ pub fn Client(comptime Reader: type, comptime Writer: type) type {
         }
 
         fn skipUntilDelimiterOrEof(self: *Self, delimiter: u8) ReaderError!void {
+            var read_byte: [1]u8 = undefined;
             while (true) {
                 const read_len = try self.reader.read(&read_byte);
                 if (read_len < 1) return;
