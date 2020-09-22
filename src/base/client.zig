@@ -262,7 +262,7 @@ pub fn Client(comptime Reader: type, comptime Writer: type) type {
 
                         while (true) : (index += 1) {
                             if (buffer[index] != ' ') break;
-                            if (index >= buffer[index]) {
+                            if (index >= buffer.len) {
                                 log.err("found invalid HTTP header: '{s}', missing value after separator", .{buffer});
 
                                 self.done = true;
