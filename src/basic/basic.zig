@@ -5,5 +5,5 @@ pub usingnamespace @import("common.zig");
 pub const Request = @import("request.zig");
 
 test "refAllDecls" {
-    std.meta.refAllDecls(@This());
+    std.testing.refAllDecls(@This());
 }

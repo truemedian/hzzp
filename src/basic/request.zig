@@ -10,6 +10,40 @@ const base = @import("../main.zig").base;
 
 usingnamespace @import("common.zig");
 
+pub const Headers = struct {
+    const HeaderList = std.ArrayList(base.Header);
+
+    allocator: *mem.Allocator,
+    
+    list: HeaderList,
+
+    pub fn init(allocator: *mem.Allocator) Headers {
+        return .{
+            .allocator = allocator,
+            .list = HeaderList.init(allocator),
+        };
+    }
+
+    pub fn deinit(self: *Headers) void {
+        for (self.list.items) |header| {
+            self.allocator.free(header.name);
+            self.allocator.free(header.value);
+        }
+
+        self.list.deinit();
+    }
+
+    pub fn append(self: *Headers, header: base.Header) !void {
+        var duped_name = try self.allocator.dupe(u8, header.name);
+        var duped_value = try self.allocator.dupe(u8, header.value);
+
+        try self.list.append(.{
+            .name = duped_name,
+            .value = duped_value,
+        });
+    }
+};
+
 const AllocError = mem.Allocator.Error;
 
 pub fn create(options: RequestOptions, reader: anytype, writer: anytype) AllocError!Request(@TypeOf(reader), @TypeOf(writer)) {
@@ -42,7 +76,7 @@ pub fn Request(comptime Reader: type, comptime Writer: type) type {
 
         sent: bool = false,
         status: RequestStatus,
-        headers: std.http.Headers,
+        headers: Headers,
         payload_index: usize = 0,
         payload_size: usize = 0,
 
@@ -57,7 +91,7 @@ pub fn Request(comptime Reader: type, comptime Writer: type) type {
                 .internal = InternalClient.init(buffer, input, output),
 
                 .status = undefined,
-                .headers = std.http.Headers.init(options.allocator),
+                .headers = Headers.init(options.allocator),
             };
         }
 
@@ -99,12 +133,6 @@ pub fn Request(comptime Reader: type, comptime Writer: type) type {
             if (self.internal.head_sent) return error.RequestAlreadySent;
 
             try self.internal.writeHeaders(headers);
-        }
-
-        pub fn addStdHeaders(self: *Self, headers: std.http.Headers) SendError!void {
-            if (self.internal.head_sent) return error.RequestAlreadySent;
-
-            try self.internal.writeHeaders(headers.toSlice());
         }
 
         pub fn finish(self: *Self) SendError!void {
@@ -151,8 +179,7 @@ pub fn Request(comptime Reader: type, comptime Writer: type) type {
                         self.status = RequestStatus.init(data.code);
                     },
                     .header => |header| {
-                        var value = try self.arena.allocator.dupe(u8, header.value);
-                        try self.headers.append(header.name, value, null);
+                        try self.headers.append(header);
                     },
                     .head_complete => break,
                     .end, .closed => return error.ConnectionClosed,
