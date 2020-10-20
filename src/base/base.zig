@@ -6,5 +6,5 @@ pub const Client = @import("client.zig");
 pub const Server = @import("server.zig");
 
 test "refAllDecls" {
-    std.meta.refAllDecls(@This());
+    std.testing.refAllDecls(@This());
 }

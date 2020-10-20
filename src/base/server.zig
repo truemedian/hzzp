@@ -500,5 +500,5 @@ test "decodes a chunked response" {
 }
 
 test "refAllDecls" {
-    std.meta.refAllDecls(@This());
+    std.testing.refAllDecls(@This());
 }
