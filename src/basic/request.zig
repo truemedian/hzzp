@@ -17,7 +17,7 @@ pub const Headers = struct {
     
     list: HeaderList,
 
-    pub fn init(allocator: *mem.Allocator) void {
+    pub fn init(allocator: *mem.Allocator) Headers {
         return .{
             .allocator = allocator,
             .list = HeaderList.init(allocator),
@@ -37,7 +37,7 @@ pub const Headers = struct {
         var duped_name = try self.allocator.dupe(u8, header.name);
         var duped_value = try self.allocator.dupe(u8, header.value);
 
-        self.list.append(.{
+        try self.list.append(.{
             .name = duped_name,
             .value = duped_value,
         });
