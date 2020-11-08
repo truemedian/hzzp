@@ -1,10 +1,8 @@
 const std = @import("std");
 
-pub usingnamespace @import("common.zig");
+pub const client = @import("client.zig");
+// pub const server = @import("server.zig");
 
-pub const Client = @import("client.zig");
-pub const Server = @import("server.zig");
-
-test "refAllDecls" {
+comptime {
     std.testing.refAllDecls(@This());
 }

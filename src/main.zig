@@ -1,8 +1,8 @@
 const std = @import("std");
 
+pub const parser = @import("parser/parser.zig");
 pub const base = @import("base/base.zig");
-pub const basic = @import("basic/basic.zig");
 
-test "refAllDecls" {
+comptime {
     std.testing.refAllDecls(@This());
 }

@@ -1,75 +1,56 @@
 const std = @import("std");
-const ascii = std.ascii;
-const fmt = std.fmt;
-const mem = std.mem;
-
-const assert = std.debug.assert;
 
 usingnamespace @import("common.zig");
 
-pub fn create(buffer: []u8, reader: anytype, writer: anytype) Client(@TypeOf(reader), @TypeOf(writer)) {
-    assert(buffer.len >= 32);
+const response_parser = @import("../main.zig").parser.response;
 
-    return Client(@TypeOf(reader), @TypeOf(writer)).init(buffer, reader, writer);
+const assert = std.debug.assert;
+
+pub fn create(buffer: []u8, reader: anytype, writer: anytype) BaseClient(@TypeOf(reader), @TypeOf(writer)) {
+    // Any buffer smaller than 16 cannot read the most simple status line (1xx A HTTP/1.1\r\n)
+    assert(buffer.len >= 16);
+
+    return BaseClient(@TypeOf(reader), @TypeOf(writer)).init(buffer, reader, writer);
 }
 
-pub fn Client(comptime Reader: type, comptime Writer: type) type {
-    const ReaderError = if (@typeInfo(Reader) == .Pointer) @typeInfo(Reader).Pointer.child.Error else Reader.Error;
-    const WriterError = if (@typeInfo(Writer) == .Pointer) @typeInfo(Writer).Pointer.child.Error else Writer.Error;
+pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
+    const ParserType = response_parser.ResponseParser(Reader);
 
     return struct {
         const Self = @This();
 
+        encoding: TransferEncoding = .unknown,
+        head_finished: bool = false,
+
         read_buffer: []u8,
-
-        send_encoding: TransferEncoding = .unknown,
-        recv_encoding: TransferEncoding = .unknown,
-
-        enc_need: usize = 0,
-        enc_read: usize = 0,
-
-        reader: Reader,
+        parser: ParserType,
         writer: Writer,
 
-        done: bool = false,
-        head_sent: bool = false,
+        payload_size: usize = 0,
+        payload_index: usize = 0,
 
-        state: ParserState = .initial,
+        // Whether a reader is currently using the read_buffer. if true, parser.next should NOT be called
+        self_contained: bool = false,
 
-        pub fn init(buffer: []u8, reader: Reader, writer: Writer) Self {
+        pub fn init(buffer: []u8, input: Reader, output: Writer) Self {
             return .{
                 .read_buffer = buffer,
-                .reader = reader,
-                .writer = writer,
+                .parser = ParserType.init(buffer, input),
+                .writer = output,
             };
         }
 
-        pub fn reset(self: *Self) void {
-            self.send_encoding = .unknown;
-            self.recv_encoding = .unknown;
+        pub fn writeStatusLine(self: *Self, method: []const u8, path: []const u8) Writer.Error!void {
+            assert(!self.head_finished);
 
-            self.enc_need = 0;
-            self.enc_read = 0;
-
-            self.done = false;
-            self.head_sent = false;
-
-            self.state = .initial;
-        }
-
-        pub fn writeHead(self: *Self, method: []const u8, path: []const u8) WriterError!void {
             try self.writer.writeAll(method);
             try self.writer.writeAll(" ");
             try self.writer.writeAll(path);
             try self.writer.writeAll(" HTTP/1.1\r\n");
         }
 
-        pub fn writeHeaderValue(self: *Self, name: []const u8, value: []const u8) WriterError!void {
-            if (ascii.eqlIgnoreCase(name, "transfer-encoding")) {
-                self.send_encoding = .chunked;
-            } else if (ascii.eqlIgnoreCase(name, "content-length")) {
-                self.send_encoding = .length;
-            }
+        pub fn writeHeaderValue(self: *Self, name: []const u8, value: []const u8) Writer.Error!void {
+            assert(!self.head_finished);
 
             try self.writer.writeAll(name);
             try self.writer.writeAll(": ");
@@ -77,40 +58,36 @@ pub fn Client(comptime Reader: type, comptime Writer: type) type {
             try self.writer.writeAll("\r\n");
         }
 
-        pub fn writeHeaderValueFormat(self: *Self, name: []const u8, comptime format: []const u8, args: anytype) WriterError!void {
-            if (ascii.eqlIgnoreCase(name, "transfer-encoding")) {
-                self.send_encoding = .chunked;
-            } else if (ascii.eqlIgnoreCase(name, "content-length")) {
-                self.send_encoding = .length;
-            }
+        pub fn writeHeader(self: *Self, header: Header) Writer.Error!void {
+            assert(!self.head_finished);
 
-            try self.writer.print("{s}: " ++ format ++ "\r\n", .{name} ++ args);
+            try self.writeHeaderValue(header.name, header.value);
         }
 
-        pub fn writeHeader(self: *Self, header: Header) WriterError!void {
-            return self.writeHeaderValue(header.name, header.value);
-        }
+        pub fn writeHeaders(self: *Self, headers: Headers) Writer.Error!void {
+            assert(!self.head_finished);
 
-        pub fn writeHeaders(self: *Self, array: Headers) WriterError!void {
-            for (array) |header| {
-                try writeHeaderValue(header.name, header.value);
+            for (headers) |header| {
+                try self.writeHeader(header);
             }
         }
 
-        pub fn writeHeadComplete(self: *Self) WriterError!void {
-            if (!self.head_sent) {
-                try self.writer.writeAll("\r\n");
-                self.head_sent = true;
-            }
+        pub fn finishHeaders(self: *Self) Writer.Error!void {
+            if (!self.head_finished) try self.writer.writeAll("\r\n");
+
+            self.head_finished = true;
         }
 
-        pub fn writeChunk(self: *Self, data: ?[]const u8) WriterError!void {
-            try self.writeHeadComplete();
-
-            switch (self.send_encoding) {
+        pub fn writePayload(self: *Self, data: ?[]const u8) Writer.Error!void {
+            switch (self.encoding) {
+                .unknown, .content_length => {
+                    if (data) |payload| {
+                        try self.writer.writeAll(payload);
+                    }
+                },
                 .chunked => {
                     if (data) |payload| {
-                        try fmt.formatInt(payload.len, 16, true, .{}, self.writer);
+                        try std.fmt.formatInt(payload.len, 16, false, .{}, self.writer);
                         try self.writer.writeAll("\r\n");
                         try self.writer.writeAll(payload);
                         try self.writer.writeAll("\r\n");
@@ -118,324 +95,96 @@ pub fn Client(comptime Reader: type, comptime Writer: type) type {
                         try self.writer.writeAll("0\r\n");
                     }
                 },
-                .length, .unknown => {
-                    if (data) |payload| {
-                        try self.writer.writeAll(payload);
-                    }
-                },
             }
         }
 
-        const ReadUntilError = ReaderError || error{BufferOverflow};
-        fn readUntilDelimiterOrEof(self: *Self, buffer: []u8, comptime delimiter: []const u8) ReadUntilError!?[]u8 {
-            var index: usize = 0;
+        pub fn next(self: *Self) ParserType.NextError!?response_parser.Event {
+            assert(!self.self_contained);
 
-            var read_byte: [1]u8 = undefined;
-            while (index < buffer.len) {
-                const read_len = try self.reader.read(&read_byte);
-                if (read_len < 1) {
-                    if (index == 0) return null; // reached end of stream but never got any data, connection closed?
-                    return buffer[0..index]; // reached end of stream but got some data.
-                }
+            return self.parser.next();
+        }
 
-                buffer[index] = read_byte[0];
-                index += 1;
+        pub const ReadNextError = ParserType.NextError;
+        pub fn readNextHeader(self: *Self, buffer: []u8) ReadNextError!?Header {
+            if (self.parser.state != .header) return null;
+            assert(!self.self_contained);
 
-                if (index >= delimiter.len and std.mem.eql(u8, buffer[index - delimiter.len .. index], delimiter)) {
-                    return buffer[0 .. index - delimiter.len]; // found the delimiter
+            if (try self.parser.next()) |event| {
+                switch (event) {
+                    .head_done, .end => return null,
+                    .header => |header| return header,
+                    .status,
+                    .payload,
+                    .skip,
+                    => unreachable,
                 }
             }
-
-            return error.BufferOverflow;
         }
 
-        fn skipUntilDelimiterOrEof(self: *Self, delimiter: u8) ReaderError!void {
-            var read_byte: [1]u8 = undefined;
-            while (true) {
-                const read_len = try self.reader.read(&read_byte);
-                if (read_len < 1) return;
+        pub const Chunk = response_parser.PayloadEvent;
+        pub fn readNextChunk(self: *Self, buffer: []u8) ReadNextError!?Chunk {
+            if (self.parser.state != .body) return null;
+            assert(!self.self_contained);
 
-                if (read_byte[0] == delimiter) return;
+            if (try self.parser.next()) |event| {
+                switch (event) {
+                    .payload => |chunk| return chunk,
+                    .skip, .end => return null,
+                    .status,
+                    .header,
+                    .head_done,
+                    => unreachable,
+                }
             }
         }
 
-        pub const ReadError = ReadUntilError || fmt.ParseIntError;
-        pub fn readEvent(self: *Self) ReadError!?ClientEvent {
-            if (self.done) return null;
+        pub fn readNextChunkBuffer(self: *Self, buffer: []u8) ReadNextError!usize {
+            if (self.parser.state != .body) return 0;
+            self.self_contained = true;
 
-            switch (self.state) {
-                .initial => {
-                    if (try self.readUntilDelimiterOrEof(self.read_buffer, " ")) |buffer| {
-                        if (!mem.eql(u8, buffer, "HTTP/1.1") and !mem.eql(u8, buffer, "HTTP/1.0")) {
-                            log.err("found invalid HTTP version: {s}, expected HTTP/1.1 or HTTP/1.0", .{buffer});
-
-                            self.done = true;
-                            return ClientEvent{
-                                .invalid = .{
-                                    .buffer = buffer,
-                                    .message = "expected HTTP/1.1 or HTTP/1.0",
-                                    .state = self.state,
-                                },
-                            };
-                        }
-                    } else {
-                        log.warn("connection closed abruptly while reading message", .{});
-
-                        return ClientEvent.closed;
-                    }
-
-                    var code: u16 = 0;
-                    if (try self.readUntilDelimiterOrEof(self.read_buffer, " ")) |buffer| {
-                        if (buffer.len != 3) {
-                            log.err("found invalid HTTP response code: {s}, expected 3 digit integer", .{buffer});
-
-                            self.done = true;
-                            return ClientEvent{
-                                .invalid = .{
-                                    .buffer = buffer,
-                                    .message = "expected response code to be 3 digits",
-                                    .state = self.state,
-                                },
-                            };
-                        }
-
-                        code = try fmt.parseUnsigned(u16, buffer, 10);
-
-                        if (code < 100 or code >= 600) {
-                            log.err("found invalid HTTP response code: {s}, not in range 100 -> 599 (inclusive)", .{buffer});
-
-                            self.done = true;
-                            return ClientEvent{
-                                .invalid = .{
-                                    .buffer = buffer,
-                                    .message = "expected response code to be in range 100 -> 599 (inclusive)",
-                                    .state = self.state,
-                                },
-                            };
-                        }
-                    } else {
-                        log.warn("connection closed abruptly while reading message", .{});
-
-                        return ClientEvent.closed;
-                    }
-
-                    if (try self.readUntilDelimiterOrEof(self.read_buffer, "\r\n")) |buffer| {
-                        self.state = .headers;
-                        return ClientEvent{
-                            .status = .{
-                                .code = code,
-                                .reason = buffer,
-                            },
-                        };
-                    } else {
-                        log.warn("connection closed abruptly while reading message", .{});
-
-                        return ClientEvent.closed;
-                    }
-                },
-                .headers => {
-                    if (try self.readUntilDelimiterOrEof(self.read_buffer, "\r\n")) |buffer| {
-                        if (buffer.len == 0) {
-                            self.state = .payload;
-
-                            return ClientEvent.head_complete;
-                        }
-
-                        const separator = blk: {
-                            if (mem.indexOfScalar(u8, buffer, ':')) |pos| {
-                                break :blk pos;
-                            } else {
-                                log.err("found invalid HTTP header: '{s}', missing ':' separator", .{buffer});
-
-                                self.done = true;
-                                return ClientEvent{
-                                    .invalid = .{
-                                        .buffer = buffer,
-                                        .message = "expected header to be separated with a ':' (colon)",
-                                        .state = self.state,
-                                    },
-                                };
-                            }
-                        };
-
-                        var index = separator + 1;
-
-                        while (true) : (index += 1) {
-                            if (buffer[index] != ' ') break;
-                            if (index >= buffer.len) {
-                                log.err("found invalid HTTP header: '{s}', missing value after separator", .{buffer});
-
-                                self.done = true;
-                                return ClientEvent{
-                                    .invalid = .{
-                                        .buffer = buffer,
-                                        .message = "no header value provided",
-                                        .state = self.state,
-                                    },
-                                };
-                            }
-                        }
-
-                        const name = buffer[0..separator];
-                        const value = buffer[index..];
-
-                        if (ascii.eqlIgnoreCase(name, "content-length")) {
-                            self.recv_encoding = .length;
-                            self.enc_need = try fmt.parseUnsigned(usize, value, 10);
-                        } else if (ascii.eqlIgnoreCase(name, "transfer-encoding")) {
-                            if (ascii.eqlIgnoreCase(value, "chunked")) {
-                                self.recv_encoding = .chunked;
-                            }
-                        }
-
-                        return ClientEvent{
-                            .header = .{
-                                .name = name,
-                                .value = value,
-                            },
-                        };
-                    } else {
-                        log.warn("connection closed abruptly while reading message", .{});
-
-                        return ClientEvent.closed;
-                    }
-                },
-                .payload => {
-                    switch (self.recv_encoding) {
-                        .unknown => {
-                            self.done = true;
-
-                            return ClientEvent.end;
+            if (self.payload_index >= self.payload_size) {
+                if (try self.parser.next()) |event| {
+                    switch (event) {
+                        .payload => |chunk| {
+                            self.payload_index = 0;
+                            self.payload_size = chunk.data.len;
                         },
-                        .length => {
-                            const left = self.enc_need - self.enc_read;
 
-                            if (left <= self.read_buffer.len) {
-                                const read_len = try self.reader.readAll(self.read_buffer[0..left]);
-                                if (read_len != left) {
-                                    log.warn("connection closed abruptly while reading message", .{});
+                        .skip, .end => {
+                            self.self_contained = false;
+                            self.payload_index = 0;
+                            self.payload_size = 0;
 
-                                    return ClientEvent.closed;
-                                }
-
-                                self.recv_encoding = .unknown;
-
-                                return ClientEvent{
-                                    .chunk = .{
-                                        .data = self.read_buffer[0..read_len],
-                                        .final = true,
-                                    },
-                                };
-                            } else {
-                                const read_len = try self.reader.read(self.read_buffer);
-                                if (read_len == 0) {
-                                    log.warn("connection closed abruptly while reading message", .{});
-
-                                    return ClientEvent.closed;
-                                }
-
-                                self.enc_read += read_len;
-
-                                return ClientEvent{
-                                    .chunk = .{
-                                        .data = self.read_buffer[0..read_len],
-                                    },
-                                };
-                            }
+                            return 0;
                         },
-                        .chunked => {
-                            if (self.enc_need == 0) {
-                                if (try self.readUntilDelimiterOrEof(self.read_buffer, "\r\n")) |buffer| {
-                                    const chunk_len = try fmt.parseInt(usize, buffer, 16);
-
-                                    if (chunk_len == 0) {
-                                        try self.skipUntilDelimiterOrEof('\n');
-
-                                        self.done = true;
-                                        return ClientEvent.end;
-                                    } else if (chunk_len <= self.read_buffer.len) {
-                                        const read_len = try self.reader.readAll(self.read_buffer[0..chunk_len]);
-                                        if (read_len != chunk_len) {
-                                            log.warn("connection closed abruptly while reading message", .{});
-
-                                            return ClientEvent.closed;
-                                        }
-
-                                        try self.skipUntilDelimiterOrEof('\n');
-
-                                        return ClientEvent{
-                                            .chunk = .{
-                                                .data = self.read_buffer[0..read_len],
-                                                .final = true,
-                                            },
-                                        };
-                                    } else {
-                                        self.enc_need = chunk_len;
-                                        self.enc_read = 0;
-
-                                        const read_len = try self.reader.read(self.read_buffer);
-                                        if (read_len != 0) {
-                                            log.warn("connection closed abruptly while reading message", .{});
-
-                                            return ClientEvent.closed;
-                                        }
-
-                                        self.enc_read += read_len;
-
-                                        return ClientEvent{
-                                            .chunk = .{
-                                                .data = self.read_buffer[0..read_len],
-                                            },
-                                        };
-                                    }
-                                } else {
-                                    log.warn("connection closed abruptly while reading message", .{});
-
-                                    return ClientEvent.closed;
-                                }
-                            } else {
-                                const left = self.enc_need - self.enc_read;
-
-                                if (left <= self.read_buffer.len) {
-                                    const read_len = try self.reader.readAll(self.read_buffer[0..left]);
-                                    if (read_len != left) {
-                                        log.warn("connection closed abruptly while reading message", .{});
-
-                                        return ClientEvent.closed;
-                                    }
-
-                                    try self.skipUntilDelimiterOrEof('\n');
-
-                                    self.enc_need = 0;
-                                    self.enc_read = 0;
-
-                                    return ClientEvent{
-                                        .chunk = .{
-                                            .data = self.read_buffer[0..read_len],
-                                            .final = true,
-                                        },
-                                    };
-                                } else {
-                                    const read_len = try self.reader.read(self.read_buffer);
-                                    if (read_len == 0) {
-                                        log.warn("connection closed abruptly while reading message", .{});
-
-                                        return ClientEvent.closed;
-                                    }
-
-                                    self.enc_read += read_len;
-
-                                    return ClientEvent{
-                                        .chunk = .{
-                                            .data = self.read_buffer[0..read_len],
-                                        },
-                                    };
-                                }
-                            }
-                        },
+                        .status,
+                        .header,
+                        .head_done,
+                        => unreachable,
                     }
-                },
+                } else {
+                    self.self_contained = false;
+                    self.payload_index = 0;
+                    self.payload_size = 0;
+
+                    return 0;
+                }
             }
+
+            const start = self.payload_index;
+            const size = std.math.min(buffer.len, self.payload_size - start);
+            const end = start + size;
+
+            mem.copy(u8, buffer[0..size], self.read_buffer[start..end]);
+            self.payload_index = end;
+
+            return size;
+        }
+
+        const PayloadReader = std.io.Reader(*Self, ParserType.NextError, readPayload);
+
+        pub fn reader(self: *Self) PayloadReader {
+            return .{ .context = self };
         }
     };
 }
@@ -445,65 +194,31 @@ const io = std.io;
 
 test "decodes a simple response" {
     var read_buffer: [32]u8 = undefined;
-    var the_void: [1024]u8 = undefined;
-    var response = "HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\ngood";
+    var output = std.ArrayList(u8).init(testing.allocator);
+    defer output.deinit();
+    
+    var response = "HTTP/1.1 404 Not Found\r\nHost: localhost\r\nContent-Length: 4\r\n\r\ngood";
+    var expected = "GET / HTTP/1.1\r\nHeader1: value1\r\nHeader2: value2\r\nHeader3: value3\r\nHeader4: value4\r\n\r\npayload";
 
     var reader = io.fixedBufferStream(response).reader();
-    var writer = io.fixedBufferStream(&the_void).writer();
-
+    var writer = output.writer();
     var client = create(&read_buffer, reader, writer);
 
-    try client.writeHead("GET", "/");
-    try client.writeHeaderValue("Host", "localhost");
-    try client.writeHeaderValueFormat("Content-Length", "{d}", .{9});
-    try client.writeChunk("aaabbbccc");
+    const headers = [_]Header{
+        Header{ .name = "Header3", .value = "value3" },
+        Header{ .name = "Header4", .value = "value4" },
+    };
 
-    var status = (try client.readEvent()).?;
-    testing.expect(status == .status and status.status.code == 200);
+    try client.writeStatusLine("GET", "/");
+    try client.writeHeaderValue("Header1", "value1");
+    try client.writeHeader(.{ .name = "Header2", .value = "value2" });
+    try client.writeHeaders(std.mem.span(&headers));
+    try client.finishHeaders();
+    try client.writePayload("payload");
 
-    var header = (try client.readEvent()).?;
-    testing.expect(header == .header and mem.eql(u8, header.header.name, "Content-Length") and mem.eql(u8, header.header.value, "4"));
-
-    var complete = (try client.readEvent()).?;
-    testing.expect(complete == .head_complete);
-
-    var body = (try client.readEvent()).?;
-    testing.expect(body == .chunk and mem.eql(u8, body.chunk.data, "good") and body.chunk.final);
-
-    var end = (try client.readEvent()).?;
-    testing.expect(end == .end);
+    testing.expectEqualStrings(output.items, expected);
 }
 
-test "decodes a chunked response" {
-    var read_buffer: [32]u8 = undefined;
-    var the_void: [1024]u8 = undefined;
-    var response = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n4\r\ngood\r\n0\r\n";
-
-    var reader = io.fixedBufferStream(response).reader();
-    var writer = io.fixedBufferStream(&the_void).writer();
-
-    var client = create(&read_buffer, reader, writer);
-
-    try client.writeHead("GET", "/");
-    try client.writeHeader(.{ .name = "Host", .value = "localhost" });
-    try client.writeChunk("aaabbbccc");
-
-    var status = (try client.readEvent()).?;
-    testing.expect(status == .status and status.status.code == 200);
-
-    var header = (try client.readEvent()).?;
-    testing.expect(header == .header and mem.eql(u8, header.header.name, "Transfer-Encoding") and mem.eql(u8, header.header.value, "chunked"));
-
-    var complete = (try client.readEvent()).?;
-    testing.expect(complete == .head_complete);
-
-    var body = (try client.readEvent()).?;
-    testing.expect(body == .chunk and mem.eql(u8, body.chunk.data, "good") and body.chunk.final);
-
-    var end = (try client.readEvent()).?;
-    testing.expect(end == .end);
-}
-
-test "refAllDecls" {
+comptime {
     std.testing.refAllDecls(@This());
 }
