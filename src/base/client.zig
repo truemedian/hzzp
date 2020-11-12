@@ -374,7 +374,7 @@ pub fn Client(comptime Reader: type, comptime Writer: type) type {
                                         self.enc_read = 0;
 
                                         const read_len = try self.reader.read(self.read_buffer);
-                                        if (read_len != 0) {
+                                        if (read_len == 0) {
                                             log.warn("connection closed abruptly while reading message", .{});
 
                                             return ClientEvent.closed;
