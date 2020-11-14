@@ -64,7 +64,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             try self.writeHeaderValue(header.name, header.value);
         }
 
-        pub fn writeHeaders(self: *Self, headers: Headers) Writer.Error!void {
+        pub fn writeHeaders(self: *Self, headers: HeadersSlice) Writer.Error!void {
             assert(!self.head_finished);
 
             for (headers) |header| {

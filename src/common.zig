@@ -22,7 +22,7 @@ pub const TransferEncoding = enum {
 };
 
 // zig fmt: off
-pub const StatusCode = enum(u16) {
+pub const StatusCode = enum(u10) {
     // as per RFC 7231
 
     info_continue            = 100,
@@ -82,3 +82,5 @@ pub const Header = struct {
     name: []const u8,
     value: []const u8,
 };
+
+pub const HeadersSlice = []const Header;
