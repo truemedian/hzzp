@@ -2,7 +2,12 @@ const std = @import("std");
 
 usingnamespace @import("common.zig");
 
-pub usingnamespace @import("../main.zig").parser.response;
+const response_parser = @import("../main.zig").parser.response;
+
+pub const ResponseParser = response_parser.ResponseParser;
+pub const PayloadEvent = response_parser.PayloadEvent;
+pub const StatusEvent = response_parser.StatusEvent;
+pub const Event = response_parser.Event;
 
 const mem = std.mem;
 
