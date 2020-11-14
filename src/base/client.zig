@@ -9,6 +9,7 @@ pub const PayloadEvent = response_parser.PayloadEvent;
 pub const StatusEvent = response_parser.StatusEvent;
 pub const Event = response_parser.Event;
 
+const ascii = std.ascii;
 const mem = std.mem;
 
 const assert = std.debug.assert;
@@ -63,7 +64,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             if (ascii.eqlIgnoreCase(name, "transfer-encoding")) {
                 self.encoding = .chunked;
             } else if (ascii.eqlIgnoreCase(name, "content-length")) {
-                self.encoding = .length;
+                self.encoding = .content_length;
             }
 
             try self.writer.writeAll(name);
@@ -79,7 +80,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             if (ascii.eqlIgnoreCase(name, "transfer-encoding")) {
                 self.encoding = .chunked;
             } else if (ascii.eqlIgnoreCase(name, "content-length")) {
-                self.encoding = .length;
+                self.encoding = .content_length;
             }
 
             try self.writer.writeAll(name);
