@@ -2,9 +2,9 @@ const std = @import("std");
 
 usingnamespace @import("common.zig");
 
-const mem = std.mem;
+pub usingnamespace @import("../main.zig").parser.response;
 
-const response_parser = @import("../main.zig").parser.response;
+const mem = std.mem;
 
 const assert = std.debug.assert;
 
@@ -16,7 +16,7 @@ pub fn create(buffer: []u8, reader: anytype, writer: anytype) BaseClient(@TypeOf
 }
 
 pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
-    const ParserType = response_parser.ResponseParser(Reader);
+    const ParserType = ResponseParser(Reader);
 
     return struct {
         const Self = @This();
@@ -54,9 +54,32 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
         pub fn writeHeaderValue(self: *Self, name: []const u8, value: []const u8) Writer.Error!void {
             assert(!self.head_finished);
 
+            // This should also guarantee that the value is actually chunked
+            if (ascii.eqlIgnoreCase(name, "transfer-encoding")) {
+                self.encoding = .chunked;
+            } else if (ascii.eqlIgnoreCase(name, "content-length")) {
+                self.encoding = .length;
+            }
+
             try self.writer.writeAll(name);
             try self.writer.writeAll(": ");
             try self.writer.writeAll(value);
+            try self.writer.writeAll("\r\n");
+        }
+        
+        pub fn writeHeaderFormat(self: *Self, name: []const u8, comptime format: []const u8, args: anytype) Writer.Error!void {
+            assert(!self.head_finished);
+
+            // This should also guarantee that the value is actually chunked
+            if (ascii.eqlIgnoreCase(name, "transfer-encoding")) {
+                self.encoding = .chunked;
+            } else if (ascii.eqlIgnoreCase(name, "content-length")) {
+                self.encoding = .length;
+            }
+
+            try self.writer.writeAll(name);
+            try self.writer.writeAll(": ");
+            try self.writer.print(format, args);
             try self.writer.writeAll("\r\n");
         }
 
@@ -100,7 +123,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             }
         }
 
-        pub fn next(self: *Self) ParserType.NextError!?response_parser.Event {
+        pub fn next(self: *Self) ParserType.NextError!?Event {
             assert(!self.self_contained);
 
             return self.parser.next();
@@ -123,7 +146,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             }
         }
 
-        pub const Chunk = response_parser.PayloadEvent;
+        pub const Chunk = PayloadEvent;
         pub fn readNextChunk(self: *Self, buffer: []u8) ReadNextError!?Chunk {
             if (self.parser.state != .body) return null;
             assert(!self.self_contained);
@@ -196,7 +219,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
 const testing = std.testing;
 const io = std.io;
 
-fn testNextField(parser: anytype, expected: ?response_parser.Event) !void {
+fn testNextField(parser: anytype, expected: ?Event) !void {
     const actual = try parser.next();
 
     testing.expect(@import("../parser/common.zig").reworkedMetaEql(actual, expected));
@@ -253,7 +276,7 @@ test "decodes a simple response" {
         },
     });
 
-    try testNextField(&client, response_parser.Event.head_done);
+    try testNextField(&client, Event.head_done);
 
     var payload_reader = client.reader();
 
