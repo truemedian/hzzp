@@ -2,6 +2,8 @@ const std = @import("std");
 
 usingnamespace @import("common.zig");
 
+const mem = std.mem;
+
 const response_parser = @import("../main.zig").parser.response;
 
 const assert = std.debug.assert;
@@ -181,9 +183,11 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             return size;
         }
 
-        const PayloadReader = std.io.Reader(*Self, ParserType.NextError, readPayload);
+        const PayloadReader = std.io.Reader(*Self, ParserType.NextError, readNextChunkBuffer);
 
         pub fn reader(self: *Self) PayloadReader {
+            assert(self.parser.state == .body);
+
             return .{ .context = self };
         }
     };
@@ -191,6 +195,12 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
 
 const testing = std.testing;
 const io = std.io;
+
+fn testNextField(parser: anytype, expected: ?response_parser.Event) !void {
+    const actual = try parser.next();
+
+    testing.expect(@import("../parser/common.zig").reworkedMetaEql(actual, expected));
+}
 
 test "decodes a simple response" {
     var read_buffer: [32]u8 = undefined;
@@ -217,6 +227,40 @@ test "decodes a simple response" {
     try client.writePayload("payload");
 
     testing.expectEqualStrings(output.items, expected);
+    
+    try testNextField(&client, .{
+        .status = .{
+            .version = .{
+                .major = 1,
+                .minor = 1,
+            },
+            .code = 404,
+            .reason = "Not Found",
+        },
+    });
+
+    try testNextField(&client, .{
+        .header = .{
+            .name = "Host",
+            .value = "localhost",
+        },
+    });
+
+    try testNextField(&client, .{
+        .header = .{
+            .name = "Content-Length",
+            .value = "4",
+        },
+    });
+
+    try testNextField(&client, response_parser.Event.head_done);
+
+    var payload_reader = client.reader();
+
+    var slice = try payload_reader.readAllAlloc(testing.allocator, 16);
+    defer testing.allocator.free(slice);
+
+    testing.expectEqualStrings(slice, "good");
 }
 
 comptime {
