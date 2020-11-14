@@ -126,7 +126,7 @@ test "hzzp.Headers appends" {
     testing.expect(headers.indexOf("Header3").? == 3);
 
     testing.expectEqualStrings("value1", headers.get("Header1").?);
-    
+
     try headers.set("Header1", "value4");
 
     testing.expectEqualStrings("value4", headers.get("Header1").?);

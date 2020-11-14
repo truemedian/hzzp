@@ -206,7 +206,7 @@ test "decodes a simple response" {
     var read_buffer: [32]u8 = undefined;
     var output = std.ArrayList(u8).init(testing.allocator);
     defer output.deinit();
-    
+
     var response = "HTTP/1.1 404 Not Found\r\nHost: localhost\r\nContent-Length: 4\r\n\r\ngood";
     var expected = "GET / HTTP/1.1\r\nHeader1: value1\r\nHeader2: value2\r\nHeader3: value3\r\nHeader4: value4\r\n\r\npayload";
 
@@ -227,7 +227,7 @@ test "decodes a simple response" {
     try client.writePayload("payload");
 
     testing.expectEqualStrings(output.items, expected);
-    
+
     try testNextField(&client, .{
         .status = .{
             .version = .{
