@@ -212,7 +212,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             return size;
         }
 
-        const PayloadReader = std.io.Reader(*Self, ParserType.NextError, readNextChunkBuffer);
+        pub const PayloadReader = std.io.Reader(*Self, ParserType.NextError, readNextChunkBuffer);
 
         pub fn reader(self: *Self) PayloadReader {
             assert(self.parser.state == .body);
