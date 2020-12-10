@@ -108,7 +108,7 @@ pub const Headers = struct {
 
 const testing = std.testing;
 
-test "hzzp.Headers appends" {
+test "headers append and get properly" {
     var headers = Headers.init(testing.allocator);
     defer headers.deinit();
 

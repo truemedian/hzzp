@@ -37,7 +37,8 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
         payload_size: usize = 0,
         payload_index: usize = 0,
 
-        // Whether a reader is currently using the read_buffer. if true, parser.next should NOT be called
+        // Whether a reader is currently using the read_buffer. if true, parser.next should NOT be called since the
+        // reader expects all of the data.
         self_contained: bool = false,
 
         pub fn init(buffer: []u8, input: Reader, output: Writer) Self {
