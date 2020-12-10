@@ -72,7 +72,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             try self.writer.writeAll(value);
             try self.writer.writeAll("\r\n");
         }
-        
+
         pub fn writeHeaderFormat(self: *Self, name: []const u8, comptime format: []const u8, args: anytype) Writer.Error!void {
             assert(!self.head_finished);
 
