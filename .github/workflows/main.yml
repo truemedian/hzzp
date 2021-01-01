@@ -3,27 +3,43 @@ name: Tests
 on:
   push:
     paths:
-    - '**.zig'
+      - "**.zig"
   pull_request:
     paths:
-    - '**.zig'
+      - "**.zig"
   schedule:
-    - cron: '0 0 * * *'
+    - cron: "0 0 * * *"
   workflow_dispatch:
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v1
+        with:
+          version: master
+
+      - name: Lint
+        run: zig fmt src
+
   test:
+    needs: lint
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: true
-    - uses: goto-bus-stop/setup-zig@v1
-      with:
-        version: master
+      - name: Checkout
+        uses: actions/checkout@v2
 
-    - name: Build
-      run: zig build test
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v1
+        with:
+          version: master
+
+      - name: Test
+        run: zig build test
