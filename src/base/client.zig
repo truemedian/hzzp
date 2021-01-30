@@ -151,14 +151,14 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             }
         }
 
-        pub fn next(self: *Self) ParserType.NextError!?Event {
+        pub const NextError = ParserType.NextError;
+        pub fn next(self: *Self) NextError!?Event {
             assert(!self.self_contained);
 
             return self.parser.next();
         }
 
-        pub const ReadNextError = ParserType.NextError;
-        pub fn readNextHeader(self: *Self, buffer: []u8) ReadNextError!?Header {
+        pub fn readNextHeader(self: *Self, buffer: []u8) NextError!?Header {
             if (self.parser.state != .header) return null;
             assert(!self.self_contained);
 
@@ -175,7 +175,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
         }
 
         pub const Chunk = PayloadEvent;
-        pub fn readNextChunk(self: *Self, buffer: []u8) ReadNextError!?Chunk {
+        pub fn readNextChunk(self: *Self, buffer: []u8) NextError!?Chunk {
             if (self.parser.state != .body) return null;
             assert(!self.self_contained);
 
@@ -191,7 +191,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             }
         }
 
-        pub fn readNextChunkBuffer(self: *Self, buffer: []u8) ReadNextError!usize {
+        pub fn readNextChunkBuffer(self: *Self, buffer: []u8) NextError!usize {
             if (self.parser.state != .body) return 0;
             self.self_contained = true;
 
@@ -234,7 +234,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             return size;
         }
 
-        pub const PayloadReader = std.io.Reader(*Self, ParserType.NextError, readNextChunkBuffer);
+        pub const PayloadReader = std.io.Reader(*Self, NextError, readNextChunkBuffer);
 
         pub fn reader(self: *Self) PayloadReader {
             assert(self.parser.state == .body);
