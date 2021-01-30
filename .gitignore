@@ -1,3 +1,11 @@
 zig-cache/
+
+# package dependencies
 deps.zig
+
+# zigmod
+.zigmod/
+
+# gyro
 gyro.lock
+.gyro/
