@@ -105,11 +105,11 @@ pub const StatusCode = enum(u10) {
 
     _,
 
-    pub inline fn code(self: StatusCode) @TagType(StatusCode) {
+    pub fn code(self: StatusCode) callconv(.Inline) @TagType(StatusCode) {
         return @enumToInt(self);
     }
 
-    pub inline fn isValid(self: StatusCode) bool {
+    pub fn isValid(self: StatusCode) callconv(.Inline) bool {
         return @enumToInt(self) >= 100 and @enumToInt(self) < 600;
     }
 };
