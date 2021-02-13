@@ -4,7 +4,7 @@ pub usingnamespace @import("../common.zig");
 
 // This is only used on buffers with an LF delimiter, so only CR needs to be checked
 pub const VerifyLineEndingError = error{InvalidLineEnding};
-pub fn verifyLineEnding(buffer: []const u8) VerifyLineEndingError![]const u8 {
+pub fn verifyLineEnding(buffer: []const u8) callconv(.Inline) VerifyLineEndingError![]const u8 {
     if (buffer[buffer.len - 1] == '\r') return buffer[0 .. buffer.len - 1];
 
     return error.InvalidLineEnding;
