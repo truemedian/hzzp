@@ -49,6 +49,18 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             };
         }
 
+        pub fn reset(self: *Self) void {
+            self.encoding = .unknown;
+            self.head_finished = false;
+
+            self.parser.reset();
+
+            self.payload_size = 0;
+            self.payload_index = 0;
+
+            self.self_contained = false;
+        }
+
         pub fn writeStatusLine(self: *Self, method: []const u8, path: []const u8) Writer.Error!void {
             assert(!self.head_finished);
 
