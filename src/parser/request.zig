@@ -89,13 +89,13 @@ pub fn RequestParser(comptime Reader: type) type {
             InvalidHeader,
             InvalidEncodingHeader,
             InvalidChunkedPayload,
-        } || VerifyLineEndingError || Reader.Error;
+        } || Reader.Error;
         pub fn next(self: *Self) NextError!?Event {
             if (self.done) return null;
 
             switch (self.state) {
                 .start_line => {
-                    const line = try verifyLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer, '\n')) orelse return error.EndOfStream);
+                    const line = normalizeLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer, '\n')) orelse return error.EndOfStream);
                     if (line.len == 0) return Event.skip; // RFC 7230 Section 3.5
 
                     var line_it = mem.split(line, " ");
@@ -132,7 +132,7 @@ pub fn RequestParser(comptime Reader: type) type {
                     };
                 },
                 .header => {
-                    const line = try verifyLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer, '\n')) orelse return error.EndOfStream);
+                    const line = normalizeLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer, '\n')) orelse return error.EndOfStream);
                     if (line.len == 0) {
                         if (self.trailer_state) {
                             self.encoding = .unknown;
@@ -203,7 +203,7 @@ pub fn RequestParser(comptime Reader: type) type {
                         },
                         .chunked => {
                             if (self.read_needed == 0) {
-                                const line = try verifyLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer, '\n')) orelse return error.EndOfStream);
+                                const line = normalizeLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer, '\n')) orelse return error.EndOfStream);
                                 const chunk_len = fmt.parseUnsigned(usize, line, 16) catch return error.InvalidChunkedPayload;
 
                                 if (chunk_len == 0) {
@@ -231,7 +231,7 @@ pub fn RequestParser(comptime Reader: type) type {
 
                             // Is it even possible for read_current to be > read_needed?
                             if (self.read_current >= self.read_needed) {
-                                const empty = try verifyLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer[left..], '\n')) orelse return error.EndOfStream);
+                                const empty = normalizeLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer[left..], '\n')) orelse return error.EndOfStream);
                                 if (empty.len != 0) return error.InvalidChunkedPayload;
 
                                 self.read_needed = 0;

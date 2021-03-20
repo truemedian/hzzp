@@ -3,11 +3,11 @@ const std = @import("std");
 pub usingnamespace @import("../common.zig");
 
 // This is only used on buffers with an LF delimiter, so only CR needs to be checked
-pub const VerifyLineEndingError = error{InvalidLineEnding};
-pub fn verifyLineEnding(buffer: []const u8) callconv(.Inline) VerifyLineEndingError![]const u8 {
+// LF is a valid line ending (RFC 7230, Section 3.5)
+pub fn normalizeLineEnding(buffer: []const u8) callconv(.Inline) []const u8 {
     if (buffer[buffer.len - 1] == '\r') return buffer[0 .. buffer.len - 1];
 
-    return error.InvalidLineEnding;
+    return buffer;
 }
 
 pub const ParserState = enum {
