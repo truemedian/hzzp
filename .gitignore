@@ -7,5 +7,4 @@ deps.zig
 .zigmod/
 
 # gyro
-gyro.lock
 .gyro/
