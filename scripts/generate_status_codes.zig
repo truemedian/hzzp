@@ -87,12 +87,24 @@ pub fn main() !void {
         \\
         \\    _,
         \\
-        \\    pub fn code(self: StatusCode) @TagType(StatusCode) {
+        \\    pub fn code(self: StatusCode) std.meta.Tag(StatusCode) {
         \\        return @enumToInt(self);
         \\    }
         \\
         \\    pub fn isValid(self: StatusCode) bool {
         \\        return @enumToInt(self) >= 100 and @enumToInt(self) < 600;
+        \\    }
+        \\
+        \\    pub const Group = enum { info, success, redirect, client_error, server_error, invalid };
+        \\    pub fn group(self: StatusCode) Group {
+        \\        return switch (self.code()) {
+        \\            100...199 => .info,
+        \\            200...299 => .success,
+        \\            300...399 => .redirect,
+        \\            400...499 => .client_error,
+        \\            500...599 => .server_error,
+        \\            else => .invalid,
+        \\        };
         \\    }
         \\
     );
