@@ -228,11 +228,15 @@ pub fn ResponseParser(comptime Reader: type) type {
 
                             // Is it even possible for read_current to be > read_needed?
                             if (self.read_current >= self.read_needed) {
-                                const empty = normalizeLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer[left..], '\n')) orelse return error.EndOfStream);
-                                if (empty.len != 0) return error.InvalidChunkedPayload;
+                                var crlf: [2]u8 = undefined;
+                                const lfread = try self.reader.readAll(&crlf);
+
+                                if (lfread < 2) return error.EndOfStream;
+                                if (crlf[0] != '\r' or crlf[1] != '\n') return error.InvalidChunkedPayload;
 
                                 self.read_needed = 0;
                             }
+
 
                             return Event{
                                 .payload = .{
