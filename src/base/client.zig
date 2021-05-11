@@ -262,7 +262,7 @@ const io = std.io;
 fn testNextField(parser: anytype, expected: ?Event) !void {
     const actual = try parser.next();
 
-    testing.expect(@import("../parser/common.zig").reworkedMetaEql(actual, expected));
+    try testing.expect(@import("../parser/common.zig").reworkedMetaEql(actual, expected));
 }
 
 test "decodes a simple response" {
@@ -289,7 +289,7 @@ test "decodes a simple response" {
     try client.finishHeaders();
     try client.writePayload("payload");
 
-    testing.expectEqualStrings(output.items, expected);
+    try testing.expectEqualStrings(output.items, expected);
 
     try testNextField(&client, .{
         .status = .{
@@ -323,7 +323,7 @@ test "decodes a simple response" {
     var slice = try payload_reader.readAllAlloc(testing.allocator, 16);
     defer testing.allocator.free(slice);
 
-    testing.expectEqualStrings(slice, "good");
+    try testing.expectEqualStrings(slice, "good");
 }
 
 comptime {

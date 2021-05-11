@@ -121,15 +121,15 @@ test "headers append and get properly" {
     try headers.append(.{ .name = "Header1", .value = "value1" });
     try headers.appendSlice(&list);
 
-    testing.expectEqualStrings("value1", headers.search("Header1").?.value);
-    testing.expect(headers.contains("Header2"));
-    testing.expect(headers.indexOf("Header3").? == 3);
+    try testing.expectEqualStrings("value1", headers.search("Header1").?.value);
+    try testing.expect(headers.contains("Header2"));
+    try testing.expect(headers.indexOf("Header3").? == 3);
 
-    testing.expectEqualStrings("value1", headers.get("Header1").?);
+    try testing.expectEqualStrings("value1", headers.get("Header1").?);
 
     try headers.set("Header1", "value4");
 
-    testing.expectEqualStrings("value4", headers.get("Header1").?);
+    try testing.expectEqualStrings("value4", headers.get("Header1").?);
 }
 
 comptime {

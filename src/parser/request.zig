@@ -257,7 +257,7 @@ const io = std.io;
 fn testNextField(parser: anytype, expected: ?Event) !void {
     const actual = try parser.next();
 
-    testing.expect(reworkedMetaEql(actual, expected));
+    try testing.expect(reworkedMetaEql(actual, expected));
 }
 
 test "decodes a simple request" {

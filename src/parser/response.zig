@@ -237,7 +237,6 @@ pub fn ResponseParser(comptime Reader: type) type {
                                 self.read_needed = 0;
                             }
 
-
                             return Event{
                                 .payload = .{
                                     .data = self.read_buffer[0..read],
@@ -258,7 +257,7 @@ const io = std.io;
 fn testNextField(parser: anytype, expected: ?Event) !void {
     const actual = try parser.next();
 
-    testing.expect(reworkedMetaEql(actual, expected));
+    try testing.expect(reworkedMetaEql(actual, expected));
 }
 
 test "decodes a simple response" {
