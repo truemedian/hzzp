@@ -123,13 +123,13 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             try self.writer.writeAll("\r\n");
         }
 
-        pub fn writeHeader(self: *Self, header: Header) callconv(.Inline) Writer.Error!void {
+        pub fn writeHeader(self: *Self, header: Header) Writer.Error!void {
             assert(!self.head_finished);
 
             try self.writeHeaderValue(header.name, header.value);
         }
 
-        pub fn writeHeaders(self: *Self, headers: HeadersSlice) callconv(.Inline) Writer.Error!void {
+        pub fn writeHeaders(self: *Self, headers: HeadersSlice) Writer.Error!void {
             assert(!self.head_finished);
 
             for (headers) |header| {
@@ -137,7 +137,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             }
         }
 
-        pub fn finishHeaders(self: *Self) callconv(.Inline) Writer.Error!void {
+        pub fn finishHeaders(self: *Self) Writer.Error!void {
             if (!self.head_finished) try self.writer.writeAll("\r\n");
 
             self.head_finished = true;
@@ -164,13 +164,13 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
         }
 
         pub const NextError = ParserType.NextError;
-        pub fn next(self: *Self) callconv(.Inline) NextError!?Event {
+        pub fn next(self: *Self) NextError!?Event {
             assert(!self.self_contained);
 
             return self.parser.next();
         }
 
-        pub fn readNextHeader(self: *Self, buffer: []u8) callconv(.Inline) NextError!?Header {
+        pub fn readNextHeader(self: *Self, buffer: []u8) NextError!?Header {
             if (self.parser.state != .header) return null;
             assert(!self.self_contained);
 
@@ -187,7 +187,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
         }
 
         pub const Chunk = PayloadEvent;
-        pub fn readNextChunk(self: *Self, buffer: []u8) callconv(.Inline) NextError!?Chunk {
+        pub fn readNextChunk(self: *Self, buffer: []u8) NextError!?Chunk {
             if (self.parser.state != .body) return null;
             assert(!self.self_contained);
 

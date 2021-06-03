@@ -26,7 +26,7 @@ pub const Headers = struct {
         self.list.deinit();
     }
 
-    pub fn ensureCapacity(self: *Headers, new_capacity: usize) callconv(.Inline) !void {
+    pub inline fn ensureCapacity(self: *Headers, new_capacity: usize) !void {
         return self.list.ensureCapacity(new_capacity);
     }
 
@@ -40,11 +40,11 @@ pub const Headers = struct {
         });
     }
 
-    pub fn append(self: *Headers, header: Header) callconv(.Inline) !void {
+    pub inline fn append(self: *Headers, header: Header) !void {
         return self.appendValue(header.name, header.value);
     }
 
-    pub fn appendSlice(self: *Headers, headers: HeadersSlice) callconv(.Inline) !void {
+    pub inline fn appendSlice(self: *Headers, headers: HeadersSlice) !void {
         for (headers) |header| {
             try self.appendValue(header.name, header.value);
         }

@@ -4,7 +4,7 @@ pub usingnamespace @import("../common.zig");
 
 // This is only used on buffers with an LF delimiter, so only CR needs to be checked
 // LF is a valid line ending (RFC 7230, Section 3.5)
-pub fn normalizeLineEnding(buffer: []const u8) callconv(.Inline) []const u8 {
+pub inline fn normalizeLineEnding(buffer: []const u8) []const u8 {
     if (buffer[buffer.len - 1] == '\r') return buffer[0 .. buffer.len - 1];
 
     return buffer;
