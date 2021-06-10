@@ -152,7 +152,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
                 },
                 .chunked => {
                     if (data) |payload| {
-                        try std.fmt.formatInt(payload.len, 16, false, .{}, self.writer);
+                        try std.fmt.formatInt(payload.len, 16, .lower, .{}, self.writer);
                         try self.writer.writeAll("\r\n");
                         try self.writer.writeAll(payload);
                         try self.writer.writeAll("\r\n");
