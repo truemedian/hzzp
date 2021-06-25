@@ -170,7 +170,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             return self.parser.next();
         }
 
-        pub fn readNextHeader(self: *Self, buffer: []u8) NextError!?Header {
+        pub fn readNextHeader(self: *Self) NextError!?Header {
             if (self.parser.state != .header) return null;
             assert(!self.self_contained);
 
@@ -187,7 +187,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
         }
 
         pub const Chunk = PayloadEvent;
-        pub fn readNextChunk(self: *Self, buffer: []u8) NextError!?Chunk {
+        pub fn readNextChunk(self: *Self) NextError!?Chunk {
             if (self.parser.state != .body) return null;
             assert(!self.self_contained);
 
