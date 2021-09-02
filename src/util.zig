@@ -1,7 +1,5 @@
 const std = @import("std");
 
-pub usingnamespace @import("../common.zig");
-
 // This is only used on buffers with an LF delimiter, so only CR needs to be checked
 // LF is a valid line ending (RFC 7230, Section 3.5)
 pub inline fn normalizeLineEnding(buffer: []const u8) []const u8 {
@@ -9,6 +7,12 @@ pub inline fn normalizeLineEnding(buffer: []const u8) []const u8 {
 
     return buffer;
 }
+
+pub const TransferEncoding = enum {
+    content_length,
+    chunked,
+    unknown,
+};
 
 pub const ParserState = enum {
     start_line,

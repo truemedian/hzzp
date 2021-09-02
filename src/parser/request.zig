@@ -1,6 +1,7 @@
 const std = @import("std");
 
-usingnamespace @import("common.zig");
+const hzzp = @import("../main.zig");
+const util = @import("../util.zig");
 
 const ascii = std.ascii;
 const math = std.math;
@@ -23,7 +24,7 @@ pub const PayloadEvent = struct {
 
 pub const Event = union(enum) {
     status: StatusEvent,
-    header: Header,
+    header: hzzp.Header,
     payload: PayloadEvent,
 
     head_done: void,
@@ -50,7 +51,7 @@ pub fn RequestParser(comptime Reader: type) type {
         const Self = @This();
 
         read_buffer: []u8,
-        encoding: TransferEncoding = .unknown,
+        encoding: util.TransferEncoding = .unknown,
         has_chunked_trailer: bool = false,
 
         request_version: ?Version = null,
@@ -60,7 +61,7 @@ pub fn RequestParser(comptime Reader: type) type {
         reader: Reader,
 
         trailer_state: bool = false,
-        state: ParserState = .start_line,
+        state: util.ParserState = .start_line,
         done: bool = false,
 
         pub fn init(buffer: []u8, reader: Reader) Self {
@@ -95,7 +96,7 @@ pub fn RequestParser(comptime Reader: type) type {
 
             switch (self.state) {
                 .start_line => {
-                    const line = normalizeLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer, '\n')) orelse return error.EndOfStream);
+                    const line = util.normalizeLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer, '\n')) orelse return error.EndOfStream);
                     if (line.len == 0) return Event.skip; // RFC 7230 Section 3.5
 
                     var line_it = mem.split(u8, line, " ");
@@ -118,7 +119,7 @@ pub fn RequestParser(comptime Reader: type) type {
                     if (!mem.eql(u8, http, "HTTP")) return error.InvalidStatusLine;
                     const version = Version.parse(version_buffer) catch return error.InvalidStatusLine;
 
-                    if (!supported_versions.includesVersion(version)) return error.UnsupportedVersion;
+                    if (!hzzp.supported_versions.includesVersion(version)) return error.UnsupportedVersion;
 
                     self.request_version = version;
                     self.state = .header;
@@ -132,7 +133,7 @@ pub fn RequestParser(comptime Reader: type) type {
                     };
                 },
                 .header => {
-                    const line = normalizeLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer, '\n')) orelse return error.EndOfStream);
+                    const line = util.normalizeLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer, '\n')) orelse return error.EndOfStream);
                     if (line.len == 0) {
                         if (self.trailer_state) {
                             self.encoding = .unknown;
@@ -203,7 +204,7 @@ pub fn RequestParser(comptime Reader: type) type {
                         },
                         .chunked => {
                             if (self.read_needed == 0) {
-                                const line = normalizeLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer, '\n')) orelse return error.EndOfStream);
+                                const line = util.normalizeLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer, '\n')) orelse return error.EndOfStream);
                                 const chunk_len = fmt.parseUnsigned(usize, line, 16) catch return error.InvalidChunkedPayload;
 
                                 if (chunk_len == 0) {
@@ -231,7 +232,7 @@ pub fn RequestParser(comptime Reader: type) type {
 
                             // Is it even possible for read_current to be > read_needed?
                             if (self.read_current >= self.read_needed) {
-                                const empty = normalizeLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer[left..], '\n')) orelse return error.EndOfStream);
+                                const empty = util.normalizeLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer[left..], '\n')) orelse return error.EndOfStream);
                                 if (empty.len != 0) return error.InvalidChunkedPayload;
 
                                 self.read_needed = 0;
@@ -257,7 +258,7 @@ const io = std.io;
 fn testNextField(parser: anytype, expected: ?Event) !void {
     const actual = try parser.next();
 
-    try testing.expect(reworkedMetaEql(actual, expected));
+    try testing.expect(util.reworkedMetaEql(actual, expected));
 }
 
 test "decodes a simple request" {

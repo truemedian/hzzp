@@ -3,7 +3,14 @@ const std = @import("std");
 const ascii = std.ascii;
 const mem = std.mem;
 
-usingnamespace @import("common.zig");
+const common = @import("common.zig");
+
+pub const Header = struct {
+    name: []const u8,
+    value: []const u8,
+};
+
+pub const HeadersSlice = []const Header;
 
 const HeaderList = std.ArrayList(Header);
 pub const Headers = struct {

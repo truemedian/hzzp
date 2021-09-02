@@ -1,10 +1,8 @@
 const std = @import("std");
 
-const Version = std.builtin.Version;
-
 pub const log = std.log.scoped(.hzzp);
 
-pub const supported_versions = Version.Range{
+pub const supported_versions = std.builtin.Version.Range{
     .min = .{
         .major = 1,
         .minor = 0,
@@ -13,12 +11,6 @@ pub const supported_versions = Version.Range{
         .major = 1,
         .minor = 1,
     },
-};
-
-pub const TransferEncoding = enum {
-    content_length,
-    chunked,
-    unknown,
 };
 
 // zig fmt: off
@@ -126,10 +118,3 @@ pub const StatusCode = enum(u10) {
     }
 };
 // zig fmt: on
-
-pub const Header = struct {
-    name: []const u8,
-    value: []const u8,
-};
-
-pub const HeadersSlice = []const Header;

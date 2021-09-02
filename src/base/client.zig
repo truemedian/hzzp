@@ -1,6 +1,7 @@
 const std = @import("std");
 
-usingnamespace @import("common.zig");
+const hzzp = @import("../main.zig");
+const util = @import("../util.zig");
 
 const response_parser = @import("../main.zig").parser.response;
 
@@ -27,7 +28,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
     return struct {
         const Self = @This();
 
-        encoding: TransferEncoding = .unknown,
+        encoding: util.TransferEncoding = .unknown,
         head_finished: bool = false,
 
         read_buffer: []u8,
@@ -123,13 +124,13 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             try self.writer.writeAll("\r\n");
         }
 
-        pub fn writeHeader(self: *Self, header: Header) Writer.Error!void {
+        pub fn writeHeader(self: *Self, header: hzzp.Header) Writer.Error!void {
             assert(!self.head_finished);
 
             try self.writeHeaderValue(header.name, header.value);
         }
 
-        pub fn writeHeaders(self: *Self, headers: HeadersSlice) Writer.Error!void {
+        pub fn writeHeaders(self: *Self, headers: hzzp.HeadersSlice) Writer.Error!void {
             assert(!self.head_finished);
 
             for (headers) |header| {
@@ -262,7 +263,7 @@ const io = std.io;
 fn testNextField(parser: anytype, expected: ?Event) !void {
     const actual = try parser.next();
 
-    try testing.expect(@import("../parser/common.zig").reworkedMetaEql(actual, expected));
+    try testing.expect(@import("../util.zig").reworkedMetaEql(actual, expected));
 }
 
 test "decodes a simple response" {
@@ -277,9 +278,9 @@ test "decodes a simple response" {
     var writer = output.writer();
     var client = create(&read_buffer, reader, writer);
 
-    const headers = [_]Header{
-        Header{ .name = "Header3", .value = "value3" },
-        Header{ .name = "Header4", .value = "value4" },
+    const headers = [_]hzzp.Header{
+        .{ .name = "Header3", .value = "value3" },
+        .{ .name = "Header4", .value = "value4" },
     };
 
     try client.writeStatusLine("GET", "/");
