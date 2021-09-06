@@ -171,7 +171,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             return self.parser.next();
         }
 
-        pub fn readNextHeader(self: *Self) NextError!?Header {
+        pub fn readNextHeader(self: *Self) NextError!?hzzp.Header {
             if (self.parser.state != .header) return null;
             assert(!self.self_contained);
 
