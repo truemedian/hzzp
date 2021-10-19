@@ -105,19 +105,16 @@ pub fn RequestParser(comptime Reader: type) type {
                     const path_buffer = line_it.next() orelse return error.InvalidStatusLine;
                     const http_version_buffer = line_it.next() orelse return error.InvalidStatusLine;
 
-                    // There should not be anything left
-                    if (line_it.index) |_| return error.InvalidStatusLine;
+                    if (http_version_buffer.len != 8 or http_version_buffer[6] != '.') return error.InvalidStatusLine;
+                    if (!mem.eql(u8, http_version_buffer[0..5], "HTTP/")) return error.InvalidStatusLine;
 
-                    var version_it = mem.split(u8, http_version_buffer, "/");
+                    const major = fmt.charToDigit(http_version_buffer[5], 10) catch return error.InvalidStatusLine;
+                    const minor = fmt.charToDigit(http_version_buffer[7], 10) catch return error.InvalidStatusLine;
 
-                    const http = version_it.next() orelse return error.InvalidStatusLine;
-                    const version_buffer = version_it.next() orelse return error.InvalidStatusLine;
-
-                    // There should not be anything left
-                    if (version_it.index) |_| return error.InvalidStatusLine;
-
-                    if (!mem.eql(u8, http, "HTTP")) return error.InvalidStatusLine;
-                    const version = Version.parse(version_buffer) catch return error.InvalidStatusLine;
+                    const version = Version{
+                        .major = major,
+                        .minor = minor,
+                    };
 
                     if (!hzzp.supported_versions.includesVersion(version)) return error.UnsupportedVersion;
 
