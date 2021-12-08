@@ -68,7 +68,7 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
 
-    const allocator = &gpa.allocator;
+    const allocator = gpa.allocator();
 
     inline for (tests) |name| {
         const response_content = try std.fs.cwd().readFileAlloc(allocator, name, 2048);

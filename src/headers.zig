@@ -14,10 +14,10 @@ pub const HeadersSlice = []const Header;
 
 const HeaderList = std.ArrayList(Header);
 pub const Headers = struct {
-    allocator: *mem.Allocator,
+    allocator: mem.Allocator,
     list: HeaderList,
 
-    pub fn init(allocator: *mem.Allocator) Headers {
+    pub fn init(allocator: mem.Allocator) Headers {
         return .{
             .allocator = allocator,
             .list = HeaderList.init(allocator),
