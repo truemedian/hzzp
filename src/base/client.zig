@@ -274,7 +274,8 @@ test "decodes a simple response" {
     var response = "HTTP/1.1 404 Not Found\r\nHost: localhost\r\nContent-Length: 4\r\n\r\ngood";
     var expected = "GET / HTTP/1.1\r\nHeader1: value1\r\nHeader2: value2\r\nHeader3: value3\r\nHeader4: value4\r\n\r\npayload";
 
-    var reader = io.fixedBufferStream(response).reader();
+    var fbs = io.fixedBufferStream(response);
+    var reader = fbs.reader();
     var writer = output.writer();
     var client = create(&read_buffer, reader, writer);
 
