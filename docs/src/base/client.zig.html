@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <title>base/client.zig - source view</title>
+    <link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAgklEQVR4AWMYWuD7EllJIM4G4g4g5oIJ/odhOJ8wToOxSTXgNxDHoeiBMfA4+wGShjyYOCkG/IGqWQziEzYAoUAeiF9D5U+DxEg14DRU7jWIT5IBIOdCxf+A+CQZAAoopEB7QJwBCBwHiip8UYmRdrAlDpIMgApwQZNnNii5Dq0MBgCxxycBnwEd+wAAAABJRU5ErkJggg=="/>
+    <style>
+      body{
+        font-family: system-ui, -apple-system, Roboto, "Segoe UI", sans-serif;
+        margin: 0;
+        line-height: 1.5;
+      }
+
+      pre > code {
+        display: block;
+        overflow: auto;
+        line-height: normal;
+        margin: 0em;
+      }
+      .tok-kw {
+          color: #333;
+          font-weight: bold;
+      }
+      .tok-str {
+          color: #d14;
+      }
+      .tok-builtin {
+          color: #005C7A;
+      }
+      .tok-comment {
+          color: #545454;
+          font-style: italic;
+      }
+      .tok-fn {
+          color: #900;
+          font-weight: bold;
+      }
+      .tok-null {
+          color: #005C5C;
+      }
+      .tok-number {
+          color: #005C5C;
+      }
+      .tok-type {
+          color: #458;
+          font-weight: bold;
+      }
+      pre {
+        counter-reset: line;
+      }
+      pre .line:before {
+        counter-increment: line;
+        content: counter(line);
+        display: inline-block;
+        padding-right: 1em;
+        width: 2em;
+        text-align: right;
+        color: #999;
+      }
+      
+      .line {
+        width: 100%;
+        display: inline-block;
+      }
+      .line:target {
+        border-top: 1px solid #ccc;
+        border-bottom: 1px solid #ccc;
+        background: #fafafa;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body{
+            background:#222;
+            color: #ccc;
+        }
+        pre > code {
+            color: #ccc;
+            background: #222;
+            border: unset;
+        }
+        .line:target {
+            border-top: 1px solid #444;
+            border-bottom: 1px solid #444;
+            background: #333;
+        }
+        .tok-kw {
+            color: #eee;
+        }
+        .tok-str {
+            color: #2e5;
+        }
+        .tok-builtin {
+            color: #ff894c;
+        }
+        .tok-comment {
+            color: #aa7;
+        }
+        .tok-fn {
+            color: #B1A0F8;
+        }
+        .tok-null {
+            color: #ff8080;
+        }
+        .tok-number {
+            color: #ff8080;
+        }
+        .tok-type {
+            color: #68f;
+        }
+      }
+    </style>
+</head>
+<body>
+<pre><code><span class="line" id="L1"><span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;std&quot;</span>);</span>
+<span class="line" id="L2"></span>
+<span class="line" id="L3"><span class="tok-kw">const</span> hzzp = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;../main.zig&quot;</span>);</span>
+<span class="line" id="L4"><span class="tok-kw">const</span> util = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;../util.zig&quot;</span>);</span>
+<span class="line" id="L5"></span>
+<span class="line" id="L6"><span class="tok-kw">const</span> response_parser = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;../main.zig&quot;</span>).parser.response;</span>
+<span class="line" id="L7"></span>
+<span class="line" id="L8"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> ResponseParser = response_parser.ResponseParser;</span>
+<span class="line" id="L9"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> PayloadEvent = response_parser.PayloadEvent;</span>
+<span class="line" id="L10"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> StatusEvent = response_parser.StatusEvent;</span>
+<span class="line" id="L11"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> Event = response_parser.Event;</span>
+<span class="line" id="L12"></span>
+<span class="line" id="L13"><span class="tok-kw">const</span> ascii = std.ascii;</span>
+<span class="line" id="L14"><span class="tok-kw">const</span> mem = std.mem;</span>
+<span class="line" id="L15"></span>
+<span class="line" id="L16"><span class="tok-kw">const</span> assert = std.debug.assert;</span>
+<span class="line" id="L17"></span>
+<span class="line" id="L18"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">create</span>(buffer: []<span class="tok-type">u8</span>, reader: <span class="tok-kw">anytype</span>, writer: <span class="tok-kw">anytype</span>) BaseClient(<span class="tok-builtin">@TypeOf</span>(reader), <span class="tok-builtin">@TypeOf</span>(writer)) {</span>
+<span class="line" id="L19">    <span class="tok-comment">// Any buffer smaller than 16 cannot read the most simple status line (1xx A HTTP/1.1\r\n)</span>
+</span>
+<span class="line" id="L20">    assert(buffer.len &gt;= <span class="tok-number">16</span>);</span>
+<span class="line" id="L21"></span>
+<span class="line" id="L22">    <span class="tok-kw">return</span> BaseClient(<span class="tok-builtin">@TypeOf</span>(reader), <span class="tok-builtin">@TypeOf</span>(writer)).init(buffer, reader, writer);</span>
+<span class="line" id="L23">}</span>
+<span class="line" id="L24"></span>
+<span class="line" id="L25"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">BaseClient</span>(<span class="tok-kw">comptime</span> Reader: <span class="tok-type">type</span>, <span class="tok-kw">comptime</span> Writer: <span class="tok-type">type</span>) <span class="tok-type">type</span> {</span>
+<span class="line" id="L26">    <span class="tok-kw">const</span> ParserType = ResponseParser(Reader);</span>
+<span class="line" id="L27"></span>
+<span class="line" id="L28">    <span class="tok-kw">return</span> <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L29">        <span class="tok-kw">const</span> Self = <span class="tok-builtin">@This</span>();</span>
+<span class="line" id="L30"></span>
+<span class="line" id="L31">        encoding: util.TransferEncoding = .unknown,</span>
+<span class="line" id="L32">        head_finished: <span class="tok-type">bool</span> = <span class="tok-null">false</span>,</span>
+<span class="line" id="L33"></span>
+<span class="line" id="L34">        read_buffer: []<span class="tok-type">u8</span>,</span>
+<span class="line" id="L35">        parser: ParserType,</span>
+<span class="line" id="L36">        writer: Writer,</span>
+<span class="line" id="L37"></span>
+<span class="line" id="L38">        payload_size: <span class="tok-type">usize</span> = <span class="tok-number">0</span>,</span>
+<span class="line" id="L39">        payload_index: <span class="tok-type">usize</span> = <span class="tok-number">0</span>,</span>
+<span class="line" id="L40"></span>
+<span class="line" id="L41">        <span class="tok-comment">// Whether a reader is currently using the read_buffer. if true, parser.next should NOT be called since the</span>
+</span>
+<span class="line" id="L42">        <span class="tok-comment">// reader expects all of the data.</span>
+</span>
+<span class="line" id="L43">        self_contained: <span class="tok-type">bool</span> = <span class="tok-null">false</span>,</span>
+<span class="line" id="L44"></span>
+<span class="line" id="L45">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">init</span>(buffer: []<span class="tok-type">u8</span>, input: Reader, output: Writer) Self {</span>
+<span class="line" id="L46">            <span class="tok-kw">return</span> .{</span>
+<span class="line" id="L47">                .read_buffer = buffer,</span>
+<span class="line" id="L48">                .parser = ParserType.init(buffer, input),</span>
+<span class="line" id="L49">                .writer = output,</span>
+<span class="line" id="L50">            };</span>
+<span class="line" id="L51">        }</span>
+<span class="line" id="L52"></span>
+<span class="line" id="L53">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">reset</span>(self: *Self) <span class="tok-type">void</span> {</span>
+<span class="line" id="L54">            self.encoding = .unknown;</span>
+<span class="line" id="L55">            self.head_finished = <span class="tok-null">false</span>;</span>
+<span class="line" id="L56"></span>
+<span class="line" id="L57">            self.parser.reset();</span>
+<span class="line" id="L58"></span>
+<span class="line" id="L59">            self.payload_size = <span class="tok-number">0</span>;</span>
+<span class="line" id="L60">            self.payload_index = <span class="tok-number">0</span>;</span>
+<span class="line" id="L61"></span>
+<span class="line" id="L62">            self.self_contained = <span class="tok-null">false</span>;</span>
+<span class="line" id="L63">        }</span>
+<span class="line" id="L64"></span>
+<span class="line" id="L65">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">writeStatusLine</span>(self: *Self, method: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>, path: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>) Writer.Error!<span class="tok-type">void</span> {</span>
+<span class="line" id="L66">            assert(!self.head_finished);</span>
+<span class="line" id="L67"></span>
+<span class="line" id="L68">            <span class="tok-kw">try</span> self.writer.writeAll(method);</span>
+<span class="line" id="L69">            <span class="tok-kw">try</span> self.writer.writeAll(<span class="tok-str">&quot; &quot;</span>);</span>
+<span class="line" id="L70">            <span class="tok-kw">try</span> self.writer.writeAll(path);</span>
+<span class="line" id="L71">            <span class="tok-kw">try</span> self.writer.writeAll(<span class="tok-str">&quot; HTTP/1.1\r\n&quot;</span>);</span>
+<span class="line" id="L72">        }</span>
+<span class="line" id="L73"></span>
+<span class="line" id="L74">        <span class="tok-comment">// This makes interacting with URI parsers like Vexu/zuri much nicer, because you don't need to reconstruct the path.</span>
+</span>
+<span class="line" id="L75">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">writeStatusLineParts</span>(self: *Self, method: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>, path: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>, query: ?[]<span class="tok-kw">const</span> <span class="tok-type">u8</span>, fragment: ?[]<span class="tok-kw">const</span> <span class="tok-type">u8</span>) Writer.Error!<span class="tok-type">void</span> {</span>
+<span class="line" id="L76">            assert(!self.head_finished);</span>
+<span class="line" id="L77"></span>
+<span class="line" id="L78">            <span class="tok-kw">try</span> self.writer.writeAll(method);</span>
+<span class="line" id="L79">            <span class="tok-kw">try</span> self.writer.writeAll(<span class="tok-str">&quot; &quot;</span>);</span>
+<span class="line" id="L80">            <span class="tok-kw">try</span> self.writer.writeAll(path);</span>
+<span class="line" id="L81"></span>
+<span class="line" id="L82">            <span class="tok-kw">if</span> (query) |qs| {</span>
+<span class="line" id="L83">                <span class="tok-kw">try</span> self.writer.writeAll(<span class="tok-str">&quot;?&quot;</span>);</span>
+<span class="line" id="L84">                <span class="tok-kw">try</span> self.writer.writeAll(qs);</span>
+<span class="line" id="L85">            }</span>
+<span class="line" id="L86"></span>
+<span class="line" id="L87">            <span class="tok-kw">if</span> (fragment) |frag| {</span>
+<span class="line" id="L88">                <span class="tok-kw">try</span> self.writer.writeAll(<span class="tok-str">&quot;#&quot;</span>);</span>
+<span class="line" id="L89">                <span class="tok-kw">try</span> self.writer.writeAll(frag);</span>
+<span class="line" id="L90">            }</span>
+<span class="line" id="L91"></span>
+<span class="line" id="L92">            <span class="tok-kw">try</span> self.writer.writeAll(<span class="tok-str">&quot; HTTP/1.1\r\n&quot;</span>);</span>
+<span class="line" id="L93">        }</span>
+<span class="line" id="L94"></span>
+<span class="line" id="L95">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">writeHeaderValue</span>(self: *Self, name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>, value: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>) Writer.Error!<span class="tok-type">void</span> {</span>
+<span class="line" id="L96">            assert(!self.head_finished);</span>
+<span class="line" id="L97"></span>
+<span class="line" id="L98">            <span class="tok-comment">// This should also guarantee that the value is actually chunked</span>
+</span>
+<span class="line" id="L99">            <span class="tok-kw">if</span> (ascii.eqlIgnoreCase(name, <span class="tok-str">&quot;transfer-encoding&quot;</span>)) {</span>
+<span class="line" id="L100">                self.encoding = .chunked;</span>
+<span class="line" id="L101">            } <span class="tok-kw">else</span> <span class="tok-kw">if</span> (ascii.eqlIgnoreCase(name, <span class="tok-str">&quot;content-length&quot;</span>)) {</span>
+<span class="line" id="L102">                self.encoding = .content_length;</span>
+<span class="line" id="L103">            }</span>
+<span class="line" id="L104"></span>
+<span class="line" id="L105">            <span class="tok-kw">try</span> self.writer.writeAll(name);</span>
+<span class="line" id="L106">            <span class="tok-kw">try</span> self.writer.writeAll(<span class="tok-str">&quot;: &quot;</span>);</span>
+<span class="line" id="L107">            <span class="tok-kw">try</span> self.writer.writeAll(value);</span>
+<span class="line" id="L108">            <span class="tok-kw">try</span> self.writer.writeAll(<span class="tok-str">&quot;\r\n&quot;</span>);</span>
+<span class="line" id="L109">        }</span>
+<span class="line" id="L110"></span>
+<span class="line" id="L111">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">writeHeaderFormat</span>(self: *Self, name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>, <span class="tok-kw">comptime</span> format: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>, args: <span class="tok-kw">anytype</span>) Writer.Error!<span class="tok-type">void</span> {</span>
+<span class="line" id="L112">            assert(!self.head_finished);</span>
+<span class="line" id="L113"></span>
+<span class="line" id="L114">            <span class="tok-comment">// This should also guarantee that the value is actually chunked</span>
+</span>
+<span class="line" id="L115">            <span class="tok-kw">if</span> (ascii.eqlIgnoreCase(name, <span class="tok-str">&quot;transfer-encoding&quot;</span>)) {</span>
+<span class="line" id="L116">                self.encoding = .chunked;</span>
+<span class="line" id="L117">            } <span class="tok-kw">else</span> <span class="tok-kw">if</span> (ascii.eqlIgnoreCase(name, <span class="tok-str">&quot;content-length&quot;</span>)) {</span>
+<span class="line" id="L118">                self.encoding = .content_length;</span>
+<span class="line" id="L119">            }</span>
+<span class="line" id="L120"></span>
+<span class="line" id="L121">            <span class="tok-kw">try</span> self.writer.writeAll(name);</span>
+<span class="line" id="L122">            <span class="tok-kw">try</span> self.writer.writeAll(<span class="tok-str">&quot;: &quot;</span>);</span>
+<span class="line" id="L123">            <span class="tok-kw">try</span> self.writer.print(format, args);</span>
+<span class="line" id="L124">            <span class="tok-kw">try</span> self.writer.writeAll(<span class="tok-str">&quot;\r\n&quot;</span>);</span>
+<span class="line" id="L125">        }</span>
+<span class="line" id="L126"></span>
+<span class="line" id="L127">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">writeHeader</span>(self: *Self, header: hzzp.Header) Writer.Error!<span class="tok-type">void</span> {</span>
+<span class="line" id="L128">            assert(!self.head_finished);</span>
+<span class="line" id="L129"></span>
+<span class="line" id="L130">            <span class="tok-kw">try</span> self.writeHeaderValue(header.name, header.value);</span>
+<span class="line" id="L131">        }</span>
+<span class="line" id="L132"></span>
+<span class="line" id="L133">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">writeHeaders</span>(self: *Self, headers: hzzp.HeadersSlice) Writer.Error!<span class="tok-type">void</span> {</span>
+<span class="line" id="L134">            assert(!self.head_finished);</span>
+<span class="line" id="L135"></span>
+<span class="line" id="L136">            <span class="tok-kw">for</span> (headers) |header| {</span>
+<span class="line" id="L137">                <span class="tok-kw">try</span> self.writeHeader(header);</span>
+<span class="line" id="L138">            }</span>
+<span class="line" id="L139">        }</span>
+<span class="line" id="L140"></span>
+<span class="line" id="L141">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">finishHeaders</span>(self: *Self) Writer.Error!<span class="tok-type">void</span> {</span>
+<span class="line" id="L142">            <span class="tok-kw">if</span> (!self.head_finished) <span class="tok-kw">try</span> self.writer.writeAll(<span class="tok-str">&quot;\r\n&quot;</span>);</span>
+<span class="line" id="L143"></span>
+<span class="line" id="L144">            self.head_finished = <span class="tok-null">true</span>;</span>
+<span class="line" id="L145">        }</span>
+<span class="line" id="L146"></span>
+<span class="line" id="L147">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">writePayload</span>(self: *Self, data: ?[]<span class="tok-kw">const</span> <span class="tok-type">u8</span>) Writer.Error!<span class="tok-type">void</span> {</span>
+<span class="line" id="L148">            <span class="tok-kw">switch</span> (self.encoding) {</span>
+<span class="line" id="L149">                .unknown, .content_length =&gt; {</span>
+<span class="line" id="L150">                    <span class="tok-kw">if</span> (data) |payload| {</span>
+<span class="line" id="L151">                        <span class="tok-kw">try</span> self.writer.writeAll(payload);</span>
+<span class="line" id="L152">                    }</span>
+<span class="line" id="L153">                },</span>
+<span class="line" id="L154">                .chunked =&gt; {</span>
+<span class="line" id="L155">                    <span class="tok-kw">if</span> (data) |payload| {</span>
+<span class="line" id="L156">                        <span class="tok-kw">try</span> std.fmt.formatInt(payload.len, <span class="tok-number">16</span>, .lower, .{}, self.writer);</span>
+<span class="line" id="L157">                        <span class="tok-kw">try</span> self.writer.writeAll(<span class="tok-str">&quot;\r\n&quot;</span>);</span>
+<span class="line" id="L158">                        <span class="tok-kw">try</span> self.writer.writeAll(payload);</span>
+<span class="line" id="L159">                        <span class="tok-kw">try</span> self.writer.writeAll(<span class="tok-str">&quot;\r\n&quot;</span>);</span>
+<span class="line" id="L160">                    } <span class="tok-kw">else</span> {</span>
+<span class="line" id="L161">                        <span class="tok-kw">try</span> self.writer.writeAll(<span class="tok-str">&quot;0\r\n&quot;</span>);</span>
+<span class="line" id="L162">                    }</span>
+<span class="line" id="L163">                },</span>
+<span class="line" id="L164">            }</span>
+<span class="line" id="L165">        }</span>
+<span class="line" id="L166"></span>
+<span class="line" id="L167">        <span class="tok-kw">pub</span> <span class="tok-kw">const</span> NextError = ParserType.NextError;</span>
+<span class="line" id="L168">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">next</span>(self: *Self) NextError!?Event {</span>
+<span class="line" id="L169">            assert(!self.self_contained);</span>
+<span class="line" id="L170"></span>
+<span class="line" id="L171">            <span class="tok-kw">return</span> self.parser.next();</span>
+<span class="line" id="L172">        }</span>
+<span class="line" id="L173"></span>
+<span class="line" id="L174">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">readNextHeader</span>(self: *Self) NextError!?hzzp.Header {</span>
+<span class="line" id="L175">            <span class="tok-kw">if</span> (self.parser.state != .header) <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
+<span class="line" id="L176">            assert(!self.self_contained);</span>
+<span class="line" id="L177"></span>
+<span class="line" id="L178">            <span class="tok-kw">if</span> (<span class="tok-kw">try</span> self.parser.next()) |event| {</span>
+<span class="line" id="L179">                <span class="tok-kw">switch</span> (event) {</span>
+<span class="line" id="L180">                    .head_done, .end =&gt; <span class="tok-kw">return</span> <span class="tok-null">null</span>,</span>
+<span class="line" id="L181">                    .header =&gt; |header| <span class="tok-kw">return</span> header,</span>
+<span class="line" id="L182">                    .status,</span>
+<span class="line" id="L183">                    .payload,</span>
+<span class="line" id="L184">                    .skip,</span>
+<span class="line" id="L185">                    =&gt; <span class="tok-kw">unreachable</span>,</span>
+<span class="line" id="L186">                }</span>
+<span class="line" id="L187">            }</span>
+<span class="line" id="L188">        }</span>
+<span class="line" id="L189"></span>
+<span class="line" id="L190">        <span class="tok-kw">pub</span> <span class="tok-kw">const</span> Chunk = PayloadEvent;</span>
+<span class="line" id="L191">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">readNextChunk</span>(self: *Self) NextError!?Chunk {</span>
+<span class="line" id="L192">            <span class="tok-kw">if</span> (self.parser.state != .body) <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
+<span class="line" id="L193">            assert(!self.self_contained);</span>
+<span class="line" id="L194"></span>
+<span class="line" id="L195">            <span class="tok-kw">if</span> (<span class="tok-kw">try</span> self.parser.next()) |event| {</span>
+<span class="line" id="L196">                <span class="tok-kw">switch</span> (event) {</span>
+<span class="line" id="L197">                    .payload =&gt; |chunk| <span class="tok-kw">return</span> chunk,</span>
+<span class="line" id="L198">                    .skip, .end =&gt; <span class="tok-kw">return</span> <span class="tok-null">null</span>,</span>
+<span class="line" id="L199">                    .status,</span>
+<span class="line" id="L200">                    .header,</span>
+<span class="line" id="L201">                    .head_done,</span>
+<span class="line" id="L202">                    =&gt; <span class="tok-kw">unreachable</span>,</span>
+<span class="line" id="L203">                }</span>
+<span class="line" id="L204">            }</span>
+<span class="line" id="L205">        }</span>
+<span class="line" id="L206"></span>
+<span class="line" id="L207">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">readNextChunkBuffer</span>(self: *Self, buffer: []<span class="tok-type">u8</span>) NextError!<span class="tok-type">usize</span> {</span>
+<span class="line" id="L208">            <span class="tok-kw">if</span> (self.parser.state != .body) <span class="tok-kw">return</span> <span class="tok-number">0</span>;</span>
+<span class="line" id="L209">            self.self_contained = <span class="tok-null">true</span>;</span>
+<span class="line" id="L210"></span>
+<span class="line" id="L211">            <span class="tok-kw">if</span> (self.payload_index &gt;= self.payload_size) {</span>
+<span class="line" id="L212">                <span class="tok-kw">if</span> (<span class="tok-kw">try</span> self.parser.next()) |event| {</span>
+<span class="line" id="L213">                    <span class="tok-kw">switch</span> (event) {</span>
+<span class="line" id="L214">                        .payload =&gt; |chunk| {</span>
+<span class="line" id="L215">                            self.payload_index = <span class="tok-number">0</span>;</span>
+<span class="line" id="L216">                            self.payload_size = chunk.data.len;</span>
+<span class="line" id="L217">                        },</span>
+<span class="line" id="L218"></span>
+<span class="line" id="L219">                        .skip, .end =&gt; {</span>
+<span class="line" id="L220">                            self.self_contained = <span class="tok-null">false</span>;</span>
+<span class="line" id="L221">                            self.payload_index = <span class="tok-number">0</span>;</span>
+<span class="line" id="L222">                            self.payload_size = <span class="tok-number">0</span>;</span>
+<span class="line" id="L223"></span>
+<span class="line" id="L224">                            <span class="tok-kw">return</span> <span class="tok-number">0</span>;</span>
+<span class="line" id="L225">                        },</span>
+<span class="line" id="L226">                        .status,</span>
+<span class="line" id="L227">                        .header,</span>
+<span class="line" id="L228">                        .head_done,</span>
+<span class="line" id="L229">                        =&gt; <span class="tok-kw">unreachable</span>,</span>
+<span class="line" id="L230">                    }</span>
+<span class="line" id="L231">                } <span class="tok-kw">else</span> {</span>
+<span class="line" id="L232">                    self.self_contained = <span class="tok-null">false</span>;</span>
+<span class="line" id="L233">                    self.payload_index = <span class="tok-number">0</span>;</span>
+<span class="line" id="L234">                    self.payload_size = <span class="tok-number">0</span>;</span>
+<span class="line" id="L235"></span>
+<span class="line" id="L236">                    <span class="tok-kw">return</span> <span class="tok-number">0</span>;</span>
+<span class="line" id="L237">                }</span>
+<span class="line" id="L238">            }</span>
+<span class="line" id="L239"></span>
+<span class="line" id="L240">            <span class="tok-kw">const</span> start = self.payload_index;</span>
+<span class="line" id="L241">            <span class="tok-kw">const</span> size = std.math.min(buffer.len, self.payload_size - start);</span>
+<span class="line" id="L242">            <span class="tok-kw">const</span> end = start + size;</span>
+<span class="line" id="L243"></span>
+<span class="line" id="L244">            mem.copy(<span class="tok-type">u8</span>, buffer[<span class="tok-number">0</span>..size], self.read_buffer[start..end]);</span>
+<span class="line" id="L245">            self.payload_index = end;</span>
+<span class="line" id="L246"></span>
+<span class="line" id="L247">            <span class="tok-kw">return</span> size;</span>
+<span class="line" id="L248">        }</span>
+<span class="line" id="L249"></span>
+<span class="line" id="L250">        <span class="tok-kw">pub</span> <span class="tok-kw">const</span> PayloadReader = std.io.Reader(*Self, NextError, readNextChunkBuffer);</span>
+<span class="line" id="L251"></span>
+<span class="line" id="L252">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">reader</span>(self: *Self) PayloadReader {</span>
+<span class="line" id="L253">            assert(self.parser.state == .body);</span>
+<span class="line" id="L254"></span>
+<span class="line" id="L255">            <span class="tok-kw">return</span> .{ .context = self };</span>
+<span class="line" id="L256">        }</span>
+<span class="line" id="L257">    };</span>
+<span class="line" id="L258">}</span>
+<span class="line" id="L259"></span>
+<span class="line" id="L260"><span class="tok-kw">const</span> testing = std.testing;</span>
+<span class="line" id="L261"><span class="tok-kw">const</span> io = std.io;</span>
+<span class="line" id="L262"></span>
+<span class="line" id="L263"><span class="tok-kw">fn</span> <span class="tok-fn">testNextField</span>(parser: <span class="tok-kw">anytype</span>, expected: ?Event) !<span class="tok-type">void</span> {</span>
+<span class="line" id="L264">    <span class="tok-kw">const</span> actual = <span class="tok-kw">try</span> parser.next();</span>
+<span class="line" id="L265"></span>
+<span class="line" id="L266">    <span class="tok-kw">try</span> testing.expect(<span class="tok-builtin">@import</span>(<span class="tok-str">&quot;../util.zig&quot;</span>).reworkedMetaEql(actual, expected));</span>
+<span class="line" id="L267">}</span>
+<span class="line" id="L268"></span>
+<span class="line" id="L269"><span class="tok-kw">test</span> <span class="tok-str">&quot;decodes a simple response&quot;</span> {</span>
+<span class="line" id="L270">    <span class="tok-kw">var</span> read_buffer: [<span class="tok-number">32</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;</span>
+<span class="line" id="L271">    <span class="tok-kw">var</span> output = std.ArrayList(<span class="tok-type">u8</span>).init(testing.allocator);</span>
+<span class="line" id="L272">    <span class="tok-kw">defer</span> output.deinit();</span>
+<span class="line" id="L273"></span>
+<span class="line" id="L274">    <span class="tok-kw">var</span> response = <span class="tok-str">&quot;HTTP/1.1 404 Not Found\r\nHost: localhost\r\nContent-Length: 4\r\n\r\ngood&quot;</span>;</span>
+<span class="line" id="L275">    <span class="tok-kw">var</span> expected = <span class="tok-str">&quot;GET / HTTP/1.1\r\nHeader1: value1\r\nHeader2: value2\r\nHeader3: value3\r\nHeader4: value4\r\n\r\npayload&quot;</span>;</span>
+<span class="line" id="L276"></span>
+<span class="line" id="L277">    <span class="tok-kw">var</span> fbs = io.fixedBufferStream(response);</span>
+<span class="line" id="L278">    <span class="tok-kw">var</span> reader = fbs.reader();</span>
+<span class="line" id="L279">    <span class="tok-kw">var</span> writer = output.writer();</span>
+<span class="line" id="L280">    <span class="tok-kw">var</span> client = create(&amp;read_buffer, reader, writer);</span>
+<span class="line" id="L281"></span>
+<span class="line" id="L282">    <span class="tok-kw">const</span> headers = [_]hzzp.Header{</span>
+<span class="line" id="L283">        .{ .name = <span class="tok-str">&quot;Header3&quot;</span>, .value = <span class="tok-str">&quot;value3&quot;</span> },</span>
+<span class="line" id="L284">        .{ .name = <span class="tok-str">&quot;Header4&quot;</span>, .value = <span class="tok-str">&quot;value4&quot;</span> },</span>
+<span class="line" id="L285">    };</span>
+<span class="line" id="L286"></span>
+<span class="line" id="L287">    <span class="tok-kw">try</span> client.writeStatusLine(<span class="tok-str">&quot;GET&quot;</span>, <span class="tok-str">&quot;/&quot;</span>);</span>
+<span class="line" id="L288">    <span class="tok-kw">try</span> client.writeHeaderValue(<span class="tok-str">&quot;Header1&quot;</span>, <span class="tok-str">&quot;value1&quot;</span>);</span>
+<span class="line" id="L289">    <span class="tok-kw">try</span> client.writeHeader(.{ .name = <span class="tok-str">&quot;Header2&quot;</span>, .value = <span class="tok-str">&quot;value2&quot;</span> });</span>
+<span class="line" id="L290">    <span class="tok-kw">try</span> client.writeHeaders(std.mem.span(&amp;headers));</span>
+<span class="line" id="L291">    <span class="tok-kw">try</span> client.finishHeaders();</span>
+<span class="line" id="L292">    <span class="tok-kw">try</span> client.writePayload(<span class="tok-str">&quot;payload&quot;</span>);</span>
+<span class="line" id="L293"></span>
+<span class="line" id="L294">    <span class="tok-kw">try</span> testing.expectEqualStrings(output.items, expected);</span>
+<span class="line" id="L295"></span>
+<span class="line" id="L296">    <span class="tok-kw">try</span> testNextField(&amp;client, .{</span>
+<span class="line" id="L297">        .status = .{</span>
+<span class="line" id="L298">            .version = .{</span>
+<span class="line" id="L299">                .major = <span class="tok-number">1</span>,</span>
+<span class="line" id="L300">                .minor = <span class="tok-number">1</span>,</span>
+<span class="line" id="L301">            },</span>
+<span class="line" id="L302">            .code = <span class="tok-number">404</span>,</span>
+<span class="line" id="L303">            .reason = <span class="tok-str">&quot;Not Found&quot;</span>,</span>
+<span class="line" id="L304">        },</span>
+<span class="line" id="L305">    });</span>
+<span class="line" id="L306"></span>
+<span class="line" id="L307">    <span class="tok-kw">try</span> testNextField(&amp;client, .{</span>
+<span class="line" id="L308">        .header = .{</span>
+<span class="line" id="L309">            .name = <span class="tok-str">&quot;Host&quot;</span>,</span>
+<span class="line" id="L310">            .value = <span class="tok-str">&quot;localhost&quot;</span>,</span>
+<span class="line" id="L311">        },</span>
+<span class="line" id="L312">    });</span>
+<span class="line" id="L313"></span>
+<span class="line" id="L314">    <span class="tok-kw">try</span> testNextField(&amp;client, .{</span>
+<span class="line" id="L315">        .header = .{</span>
+<span class="line" id="L316">            .name = <span class="tok-str">&quot;Content-Length&quot;</span>,</span>
+<span class="line" id="L317">            .value = <span class="tok-str">&quot;4&quot;</span>,</span>
+<span class="line" id="L318">        },</span>
+<span class="line" id="L319">    });</span>
+<span class="line" id="L320"></span>
+<span class="line" id="L321">    <span class="tok-kw">try</span> testNextField(&amp;client, Event.head_done);</span>
+<span class="line" id="L322"></span>
+<span class="line" id="L323">    <span class="tok-kw">var</span> payload_reader = client.reader();</span>
+<span class="line" id="L324"></span>
+<span class="line" id="L325">    <span class="tok-kw">var</span> slice = <span class="tok-kw">try</span> payload_reader.readAllAlloc(testing.allocator, <span class="tok-number">16</span>);</span>
+<span class="line" id="L326">    <span class="tok-kw">defer</span> testing.allocator.free(slice);</span>
+<span class="line" id="L327"></span>
+<span class="line" id="L328">    <span class="tok-kw">try</span> testing.expectEqualStrings(slice, <span class="tok-str">&quot;good&quot;</span>);</span>
+<span class="line" id="L329">}</span>
+<span class="line" id="L330"></span>
+<span class="line" id="L331"><span class="tok-kw">comptime</span> {</span>
+<span class="line" id="L332">    std.testing.refAllDecls(<span class="tok-builtin">@This</span>());</span>
+<span class="line" id="L333">}</span>
+<span class="line" id="L334"></span>
+</code></pre></body>
+</html>
