@@ -404,7 +404,7 @@
 <span class="line" id="L273">                    .freebsd =&gt; <span class="tok-kw">return</span> .{</span>
 <span class="line" id="L274">                        .semver = Version.Range{</span>
 <span class="line" id="L275">                            .min = .{ .major = <span class="tok-number">12</span>, .minor = <span class="tok-number">0</span> },</span>
-<span class="line" id="L276">                            .max = .{ .major = <span class="tok-number">13</span>, .minor = <span class="tok-number">0</span> },</span>
+<span class="line" id="L276">                            .max = .{ .major = <span class="tok-number">13</span>, .minor = <span class="tok-number">1</span> },</span>
 <span class="line" id="L277">                        },</span>
 <span class="line" id="L278">                    },</span>
 <span class="line" id="L279">                    .macos =&gt; <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (arch) {</span>
@@ -443,19 +443,19 @@
 <span class="line" id="L312">                    .netbsd =&gt; <span class="tok-kw">return</span> .{</span>
 <span class="line" id="L313">                        .semver = .{</span>
 <span class="line" id="L314">                            .min = .{ .major = <span class="tok-number">8</span>, .minor = <span class="tok-number">0</span> },</span>
-<span class="line" id="L315">                            .max = .{ .major = <span class="tok-number">9</span>, .minor = <span class="tok-number">1</span> },</span>
+<span class="line" id="L315">                            .max = .{ .major = <span class="tok-number">10</span>, .minor = <span class="tok-number">0</span> },</span>
 <span class="line" id="L316">                        },</span>
 <span class="line" id="L317">                    },</span>
 <span class="line" id="L318">                    .openbsd =&gt; <span class="tok-kw">return</span> .{</span>
 <span class="line" id="L319">                        .semver = .{</span>
 <span class="line" id="L320">                            .min = .{ .major = <span class="tok-number">6</span>, .minor = <span class="tok-number">8</span> },</span>
-<span class="line" id="L321">                            .max = .{ .major = <span class="tok-number">6</span>, .minor = <span class="tok-number">9</span> },</span>
+<span class="line" id="L321">                            .max = .{ .major = <span class="tok-number">7</span>, .minor = <span class="tok-number">2</span> },</span>
 <span class="line" id="L322">                        },</span>
 <span class="line" id="L323">                    },</span>
 <span class="line" id="L324">                    .dragonfly =&gt; <span class="tok-kw">return</span> .{</span>
 <span class="line" id="L325">                        .semver = .{</span>
 <span class="line" id="L326">                            .min = .{ .major = <span class="tok-number">5</span>, .minor = <span class="tok-number">8</span> },</span>
-<span class="line" id="L327">                            .max = .{ .major = <span class="tok-number">6</span>, .minor = <span class="tok-number">0</span> },</span>
+<span class="line" id="L327">                            .max = .{ .major = <span class="tok-number">6</span>, .minor = <span class="tok-number">4</span> },</span>
 <span class="line" id="L328">                        },</span>
 <span class="line" id="L329">                    },</span>
 <span class="line" id="L330">                    .solaris =&gt; <span class="tok-kw">return</span> .{</span>
@@ -759,7 +759,7 @@
 <span class="line" id="L626">                .raw =&gt; <span class="tok-str">&quot;.bin&quot;</span>,</span>
 <span class="line" id="L627">                .plan9 =&gt; plan9Ext(cpu_arch),</span>
 <span class="line" id="L628">                .nvptx =&gt; <span class="tok-str">&quot;.ptx&quot;</span>,</span>
-<span class="line" id="L629">                .dxcontainer =&gt; <span class="tok-builtin">@panic</span>(<span class="tok-str">&quot;TODO what's the extension for these?&quot;</span>),</span>
+<span class="line" id="L629">                .dxcontainer =&gt; <span class="tok-str">&quot;.dxil&quot;</span>,</span>
 <span class="line" id="L630">            };</span>
 <span class="line" id="L631">        }</span>
 <span class="line" id="L632"></span>
@@ -1316,731 +1316,736 @@
 <span class="line" id="L1179">            <span class="tok-comment">/// Returns whether this architecture supports the address space</span></span>
 <span class="line" id="L1180">            <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">supportsAddressSpace</span>(arch: Arch, address_space: std.builtin.AddressSpace) <span class="tok-type">bool</span> {</span>
 <span class="line" id="L1181">                <span class="tok-kw">const</span> is_nvptx = arch == .nvptx <span class="tok-kw">or</span> arch == .nvptx64;</span>
-<span class="line" id="L1182">                <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (address_space) {</span>
-<span class="line" id="L1183">                    .generic =&gt; <span class="tok-null">true</span>,</span>
-<span class="line" id="L1184">                    .fs, .gs, .ss =&gt; arch == .x86_64 <span class="tok-kw">or</span> arch == .x86,</span>
-<span class="line" id="L1185">                    .global, .constant, .local, .shared =&gt; arch == .amdgcn <span class="tok-kw">or</span> is_nvptx,</span>
-<span class="line" id="L1186">                    .param =&gt; is_nvptx,</span>
-<span class="line" id="L1187">                };</span>
-<span class="line" id="L1188">            }</span>
-<span class="line" id="L1189"></span>
-<span class="line" id="L1190">            <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">ptrBitWidth</span>(arch: Arch) <span class="tok-type">u16</span> {</span>
-<span class="line" id="L1191">                <span class="tok-kw">switch</span> (arch) {</span>
-<span class="line" id="L1192">                    .avr,</span>
-<span class="line" id="L1193">                    .msp430,</span>
-<span class="line" id="L1194">                    .spu_2,</span>
-<span class="line" id="L1195">                    =&gt; <span class="tok-kw">return</span> <span class="tok-number">16</span>,</span>
-<span class="line" id="L1196"></span>
-<span class="line" id="L1197">                    .arc,</span>
-<span class="line" id="L1198">                    .arm,</span>
-<span class="line" id="L1199">                    .armeb,</span>
-<span class="line" id="L1200">                    .csky,</span>
-<span class="line" id="L1201">                    .hexagon,</span>
-<span class="line" id="L1202">                    .m68k,</span>
-<span class="line" id="L1203">                    .le32,</span>
-<span class="line" id="L1204">                    .mips,</span>
-<span class="line" id="L1205">                    .mipsel,</span>
-<span class="line" id="L1206">                    .powerpc,</span>
-<span class="line" id="L1207">                    .powerpcle,</span>
-<span class="line" id="L1208">                    .r600,</span>
-<span class="line" id="L1209">                    .riscv32,</span>
-<span class="line" id="L1210">                    .sparc,</span>
-<span class="line" id="L1211">                    .sparcel,</span>
-<span class="line" id="L1212">                    .tce,</span>
-<span class="line" id="L1213">                    .tcele,</span>
-<span class="line" id="L1214">                    .thumb,</span>
-<span class="line" id="L1215">                    .thumbeb,</span>
-<span class="line" id="L1216">                    .x86,</span>
-<span class="line" id="L1217">                    .xcore,</span>
-<span class="line" id="L1218">                    .nvptx,</span>
-<span class="line" id="L1219">                    .amdil,</span>
-<span class="line" id="L1220">                    .hsail,</span>
-<span class="line" id="L1221">                    .spir,</span>
-<span class="line" id="L1222">                    .kalimba,</span>
-<span class="line" id="L1223">                    .shave,</span>
-<span class="line" id="L1224">                    .lanai,</span>
-<span class="line" id="L1225">                    .wasm32,</span>
-<span class="line" id="L1226">                    .renderscript32,</span>
-<span class="line" id="L1227">                    .aarch64_32,</span>
-<span class="line" id="L1228">                    .spirv32,</span>
-<span class="line" id="L1229">                    .loongarch32,</span>
-<span class="line" id="L1230">                    .dxil,</span>
-<span class="line" id="L1231">                    =&gt; <span class="tok-kw">return</span> <span class="tok-number">32</span>,</span>
-<span class="line" id="L1232"></span>
-<span class="line" id="L1233">                    .aarch64,</span>
-<span class="line" id="L1234">                    .aarch64_be,</span>
-<span class="line" id="L1235">                    .mips64,</span>
-<span class="line" id="L1236">                    .mips64el,</span>
-<span class="line" id="L1237">                    .powerpc64,</span>
-<span class="line" id="L1238">                    .powerpc64le,</span>
-<span class="line" id="L1239">                    .riscv64,</span>
-<span class="line" id="L1240">                    .x86_64,</span>
-<span class="line" id="L1241">                    .nvptx64,</span>
-<span class="line" id="L1242">                    .le64,</span>
-<span class="line" id="L1243">                    .amdil64,</span>
-<span class="line" id="L1244">                    .hsail64,</span>
-<span class="line" id="L1245">                    .spir64,</span>
-<span class="line" id="L1246">                    .wasm64,</span>
-<span class="line" id="L1247">                    .renderscript64,</span>
-<span class="line" id="L1248">                    .amdgcn,</span>
-<span class="line" id="L1249">                    .bpfel,</span>
-<span class="line" id="L1250">                    .bpfeb,</span>
-<span class="line" id="L1251">                    .sparc64,</span>
-<span class="line" id="L1252">                    .s390x,</span>
-<span class="line" id="L1253">                    .ve,</span>
-<span class="line" id="L1254">                    .spirv64,</span>
-<span class="line" id="L1255">                    .loongarch64,</span>
-<span class="line" id="L1256">                    =&gt; <span class="tok-kw">return</span> <span class="tok-number">64</span>,</span>
-<span class="line" id="L1257">                }</span>
-<span class="line" id="L1258">            }</span>
-<span class="line" id="L1259"></span>
-<span class="line" id="L1260">            <span class="tok-comment">/// Returns a name that matches the lib/std/target/* source file name.</span></span>
-<span class="line" id="L1261">            <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">genericName</span>(arch: Arch) []<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
-<span class="line" id="L1262">                <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (arch) {</span>
-<span class="line" id="L1263">                    .arm, .armeb, .thumb, .thumbeb =&gt; <span class="tok-str">&quot;arm&quot;</span>,</span>
-<span class="line" id="L1264">                    .aarch64, .aarch64_be, .aarch64_32 =&gt; <span class="tok-str">&quot;aarch64&quot;</span>,</span>
-<span class="line" id="L1265">                    .bpfel, .bpfeb =&gt; <span class="tok-str">&quot;bpf&quot;</span>,</span>
-<span class="line" id="L1266">                    .mips, .mipsel, .mips64, .mips64el =&gt; <span class="tok-str">&quot;mips&quot;</span>,</span>
-<span class="line" id="L1267">                    .powerpc, .powerpcle, .powerpc64, .powerpc64le =&gt; <span class="tok-str">&quot;powerpc&quot;</span>,</span>
-<span class="line" id="L1268">                    .amdgcn =&gt; <span class="tok-str">&quot;amdgpu&quot;</span>,</span>
-<span class="line" id="L1269">                    .riscv32, .riscv64 =&gt; <span class="tok-str">&quot;riscv&quot;</span>,</span>
-<span class="line" id="L1270">                    .sparc, .sparc64, .sparcel =&gt; <span class="tok-str">&quot;sparc&quot;</span>,</span>
-<span class="line" id="L1271">                    .s390x =&gt; <span class="tok-str">&quot;s390x&quot;</span>,</span>
-<span class="line" id="L1272">                    .x86, .x86_64 =&gt; <span class="tok-str">&quot;x86&quot;</span>,</span>
-<span class="line" id="L1273">                    .nvptx, .nvptx64 =&gt; <span class="tok-str">&quot;nvptx&quot;</span>,</span>
-<span class="line" id="L1274">                    .wasm32, .wasm64 =&gt; <span class="tok-str">&quot;wasm&quot;</span>,</span>
-<span class="line" id="L1275">                    .spirv32, .spirv64 =&gt; <span class="tok-str">&quot;spir-v&quot;</span>,</span>
-<span class="line" id="L1276">                    <span class="tok-kw">else</span> =&gt; <span class="tok-builtin">@tagName</span>(arch),</span>
-<span class="line" id="L1277">                };</span>
-<span class="line" id="L1278">            }</span>
-<span class="line" id="L1279"></span>
-<span class="line" id="L1280">            <span class="tok-comment">/// All CPU features Zig is aware of, sorted lexicographically by name.</span></span>
-<span class="line" id="L1281">            <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">allFeaturesList</span>(arch: Arch) []<span class="tok-kw">const</span> Cpu.Feature {</span>
-<span class="line" id="L1282">                <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (arch) {</span>
-<span class="line" id="L1283">                    .arm, .armeb, .thumb, .thumbeb =&gt; &amp;arm.all_features,</span>
-<span class="line" id="L1284">                    .aarch64, .aarch64_be, .aarch64_32 =&gt; &amp;aarch64.all_features,</span>
-<span class="line" id="L1285">                    .avr =&gt; &amp;avr.all_features,</span>
-<span class="line" id="L1286">                    .bpfel, .bpfeb =&gt; &amp;bpf.all_features,</span>
-<span class="line" id="L1287">                    .hexagon =&gt; &amp;hexagon.all_features,</span>
-<span class="line" id="L1288">                    .mips, .mipsel, .mips64, .mips64el =&gt; &amp;mips.all_features,</span>
-<span class="line" id="L1289">                    .msp430 =&gt; &amp;msp430.all_features,</span>
-<span class="line" id="L1290">                    .powerpc, .powerpcle, .powerpc64, .powerpc64le =&gt; &amp;powerpc.all_features,</span>
-<span class="line" id="L1291">                    .amdgcn =&gt; &amp;amdgpu.all_features,</span>
-<span class="line" id="L1292">                    .riscv32, .riscv64 =&gt; &amp;riscv.all_features,</span>
-<span class="line" id="L1293">                    .sparc, .sparc64, .sparcel =&gt; &amp;sparc.all_features,</span>
-<span class="line" id="L1294">                    .spirv32, .spirv64 =&gt; &amp;spirv.all_features,</span>
-<span class="line" id="L1295">                    .s390x =&gt; &amp;s390x.all_features,</span>
-<span class="line" id="L1296">                    .x86, .x86_64 =&gt; &amp;x86.all_features,</span>
-<span class="line" id="L1297">                    .nvptx, .nvptx64 =&gt; &amp;nvptx.all_features,</span>
-<span class="line" id="L1298">                    .ve =&gt; &amp;ve.all_features,</span>
-<span class="line" id="L1299">                    .wasm32, .wasm64 =&gt; &amp;wasm.all_features,</span>
-<span class="line" id="L1300"></span>
-<span class="line" id="L1301">                    <span class="tok-kw">else</span> =&gt; &amp;[<span class="tok-number">0</span>]Cpu.Feature{},</span>
-<span class="line" id="L1302">                };</span>
-<span class="line" id="L1303">            }</span>
-<span class="line" id="L1304"></span>
-<span class="line" id="L1305">            <span class="tok-comment">/// All processors Zig is aware of, sorted lexicographically by name.</span></span>
-<span class="line" id="L1306">            <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">allCpuModels</span>(arch: Arch) []<span class="tok-kw">const</span> *<span class="tok-kw">const</span> Cpu.Model {</span>
-<span class="line" id="L1307">                <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (arch) {</span>
-<span class="line" id="L1308">                    .arm, .armeb, .thumb, .thumbeb =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(arm.cpu),</span>
-<span class="line" id="L1309">                    .aarch64, .aarch64_be, .aarch64_32 =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(aarch64.cpu),</span>
-<span class="line" id="L1310">                    .avr =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(avr.cpu),</span>
-<span class="line" id="L1311">                    .bpfel, .bpfeb =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(bpf.cpu),</span>
-<span class="line" id="L1312">                    .hexagon =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(hexagon.cpu),</span>
-<span class="line" id="L1313">                    .mips, .mipsel, .mips64, .mips64el =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(mips.cpu),</span>
-<span class="line" id="L1314">                    .msp430 =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(msp430.cpu),</span>
-<span class="line" id="L1315">                    .powerpc, .powerpcle, .powerpc64, .powerpc64le =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(powerpc.cpu),</span>
-<span class="line" id="L1316">                    .amdgcn =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(amdgpu.cpu),</span>
-<span class="line" id="L1317">                    .riscv32, .riscv64 =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(riscv.cpu),</span>
-<span class="line" id="L1318">                    .sparc, .sparc64, .sparcel =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(sparc.cpu),</span>
-<span class="line" id="L1319">                    .s390x =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(s390x.cpu),</span>
-<span class="line" id="L1320">                    .x86, .x86_64 =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(x86.cpu),</span>
-<span class="line" id="L1321">                    .nvptx, .nvptx64 =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(nvptx.cpu),</span>
-<span class="line" id="L1322">                    .ve =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(ve.cpu),</span>
-<span class="line" id="L1323">                    .wasm32, .wasm64 =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(wasm.cpu),</span>
-<span class="line" id="L1324"></span>
-<span class="line" id="L1325">                    <span class="tok-kw">else</span> =&gt; &amp;[<span class="tok-number">0</span>]*<span class="tok-kw">const</span> Model{},</span>
-<span class="line" id="L1326">                };</span>
-<span class="line" id="L1327">            }</span>
-<span class="line" id="L1328"></span>
-<span class="line" id="L1329">            <span class="tok-kw">fn</span> <span class="tok-fn">allCpusFromDecls</span>(<span class="tok-kw">comptime</span> cpus: <span class="tok-type">type</span>) []<span class="tok-kw">const</span> *<span class="tok-kw">const</span> Cpu.Model {</span>
-<span class="line" id="L1330">                <span class="tok-kw">const</span> decls = <span class="tok-builtin">@typeInfo</span>(cpus).Struct.decls;</span>
-<span class="line" id="L1331">                <span class="tok-kw">var</span> array: [decls.len]*<span class="tok-kw">const</span> Cpu.Model = <span class="tok-null">undefined</span>;</span>
-<span class="line" id="L1332">                <span class="tok-kw">for</span> (decls) |decl, i| {</span>
-<span class="line" id="L1333">                    array[i] = &amp;<span class="tok-builtin">@field</span>(cpus, decl.name);</span>
-<span class="line" id="L1334">                }</span>
-<span class="line" id="L1335">                <span class="tok-kw">return</span> &amp;array;</span>
-<span class="line" id="L1336">            }</span>
-<span class="line" id="L1337">        };</span>
-<span class="line" id="L1338"></span>
-<span class="line" id="L1339">        <span class="tok-kw">pub</span> <span class="tok-kw">const</span> Model = <span class="tok-kw">struct</span> {</span>
-<span class="line" id="L1340">            name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
-<span class="line" id="L1341">            llvm_name: ?[:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
-<span class="line" id="L1342">            features: Feature.Set,</span>
-<span class="line" id="L1343"></span>
-<span class="line" id="L1344">            <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">toCpu</span>(model: *<span class="tok-kw">const</span> Model, arch: Arch) Cpu {</span>
-<span class="line" id="L1345">                <span class="tok-kw">var</span> features = model.features;</span>
-<span class="line" id="L1346">                features.populateDependencies(arch.allFeaturesList());</span>
-<span class="line" id="L1347">                <span class="tok-kw">return</span> .{</span>
-<span class="line" id="L1348">                    .arch = arch,</span>
-<span class="line" id="L1349">                    .model = model,</span>
-<span class="line" id="L1350">                    .features = features,</span>
-<span class="line" id="L1351">                };</span>
-<span class="line" id="L1352">            }</span>
-<span class="line" id="L1353"></span>
-<span class="line" id="L1354">            <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">generic</span>(arch: Arch) *<span class="tok-kw">const</span> Model {</span>
-<span class="line" id="L1355">                <span class="tok-kw">const</span> S = <span class="tok-kw">struct</span> {</span>
-<span class="line" id="L1356">                    <span class="tok-kw">const</span> generic_model = Model{</span>
-<span class="line" id="L1357">                        .name = <span class="tok-str">&quot;generic&quot;</span>,</span>
-<span class="line" id="L1358">                        .llvm_name = <span class="tok-null">null</span>,</span>
-<span class="line" id="L1359">                        .features = Cpu.Feature.Set.empty,</span>
-<span class="line" id="L1360">                    };</span>
-<span class="line" id="L1361">                };</span>
-<span class="line" id="L1362">                <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (arch) {</span>
-<span class="line" id="L1363">                    .arm, .armeb, .thumb, .thumbeb =&gt; &amp;arm.cpu.generic,</span>
-<span class="line" id="L1364">                    .aarch64, .aarch64_be, .aarch64_32 =&gt; &amp;aarch64.cpu.generic,</span>
-<span class="line" id="L1365">                    .avr =&gt; &amp;avr.cpu.avr2,</span>
-<span class="line" id="L1366">                    .bpfel, .bpfeb =&gt; &amp;bpf.cpu.generic,</span>
-<span class="line" id="L1367">                    .hexagon =&gt; &amp;hexagon.cpu.generic,</span>
-<span class="line" id="L1368">                    .m68k =&gt; &amp;m68k.cpu.generic,</span>
-<span class="line" id="L1369">                    .mips, .mipsel =&gt; &amp;mips.cpu.mips32,</span>
-<span class="line" id="L1370">                    .mips64, .mips64el =&gt; &amp;mips.cpu.mips64,</span>
-<span class="line" id="L1371">                    .msp430 =&gt; &amp;msp430.cpu.generic,</span>
-<span class="line" id="L1372">                    .powerpc =&gt; &amp;powerpc.cpu.ppc,</span>
-<span class="line" id="L1373">                    .powerpcle =&gt; &amp;powerpc.cpu.ppc,</span>
-<span class="line" id="L1374">                    .powerpc64 =&gt; &amp;powerpc.cpu.ppc64,</span>
-<span class="line" id="L1375">                    .powerpc64le =&gt; &amp;powerpc.cpu.ppc64le,</span>
-<span class="line" id="L1376">                    .amdgcn =&gt; &amp;amdgpu.cpu.generic,</span>
-<span class="line" id="L1377">                    .riscv32 =&gt; &amp;riscv.cpu.generic_rv32,</span>
-<span class="line" id="L1378">                    .riscv64 =&gt; &amp;riscv.cpu.generic_rv64,</span>
-<span class="line" id="L1379">                    .sparc, .sparcel =&gt; &amp;sparc.cpu.generic,</span>
-<span class="line" id="L1380">                    .sparc64 =&gt; &amp;sparc.cpu.v9, <span class="tok-comment">// 64-bit SPARC needs v9 as the baseline</span>
+<span class="line" id="L1182">                <span class="tok-kw">const</span> is_spirv = arch == .spirv32 <span class="tok-kw">or</span> arch == .spirv64;</span>
+<span class="line" id="L1183">                <span class="tok-kw">const</span> is_gpu = is_nvptx <span class="tok-kw">or</span> is_spirv <span class="tok-kw">or</span> arch == .amdgcn;</span>
+<span class="line" id="L1184">                <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (address_space) {</span>
+<span class="line" id="L1185">                    .generic =&gt; <span class="tok-null">true</span>,</span>
+<span class="line" id="L1186">                    .fs, .gs, .ss =&gt; arch == .x86_64 <span class="tok-kw">or</span> arch == .x86,</span>
+<span class="line" id="L1187">                    .global, .constant, .local, .shared =&gt; is_gpu,</span>
+<span class="line" id="L1188">                    .param =&gt; is_nvptx,</span>
+<span class="line" id="L1189">                    <span class="tok-comment">// TODO this should also check how many flash banks the cpu has</span>
 </span>
-<span class="line" id="L1381">                    .s390x =&gt; &amp;s390x.cpu.generic,</span>
-<span class="line" id="L1382">                    .x86 =&gt; &amp;x86.cpu.<span class="tok-type">i386</span>,</span>
-<span class="line" id="L1383">                    .x86_64 =&gt; &amp;x86.cpu.x86_64,</span>
-<span class="line" id="L1384">                    .nvptx, .nvptx64 =&gt; &amp;nvptx.cpu.sm_20,</span>
-<span class="line" id="L1385">                    .ve =&gt; &amp;ve.cpu.generic,</span>
-<span class="line" id="L1386">                    .wasm32, .wasm64 =&gt; &amp;wasm.cpu.generic,</span>
-<span class="line" id="L1387"></span>
-<span class="line" id="L1388">                    <span class="tok-kw">else</span> =&gt; &amp;S.generic_model,</span>
-<span class="line" id="L1389">                };</span>
-<span class="line" id="L1390">            }</span>
+<span class="line" id="L1190">                    .flash, .flash1, .flash2, .flash3, .flash4, .flash5 =&gt; arch == .avr,</span>
+<span class="line" id="L1191">                };</span>
+<span class="line" id="L1192">            }</span>
+<span class="line" id="L1193"></span>
+<span class="line" id="L1194">            <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">ptrBitWidth</span>(arch: Arch) <span class="tok-type">u16</span> {</span>
+<span class="line" id="L1195">                <span class="tok-kw">switch</span> (arch) {</span>
+<span class="line" id="L1196">                    .avr,</span>
+<span class="line" id="L1197">                    .msp430,</span>
+<span class="line" id="L1198">                    .spu_2,</span>
+<span class="line" id="L1199">                    =&gt; <span class="tok-kw">return</span> <span class="tok-number">16</span>,</span>
+<span class="line" id="L1200"></span>
+<span class="line" id="L1201">                    .arc,</span>
+<span class="line" id="L1202">                    .arm,</span>
+<span class="line" id="L1203">                    .armeb,</span>
+<span class="line" id="L1204">                    .csky,</span>
+<span class="line" id="L1205">                    .hexagon,</span>
+<span class="line" id="L1206">                    .m68k,</span>
+<span class="line" id="L1207">                    .le32,</span>
+<span class="line" id="L1208">                    .mips,</span>
+<span class="line" id="L1209">                    .mipsel,</span>
+<span class="line" id="L1210">                    .powerpc,</span>
+<span class="line" id="L1211">                    .powerpcle,</span>
+<span class="line" id="L1212">                    .r600,</span>
+<span class="line" id="L1213">                    .riscv32,</span>
+<span class="line" id="L1214">                    .sparc,</span>
+<span class="line" id="L1215">                    .sparcel,</span>
+<span class="line" id="L1216">                    .tce,</span>
+<span class="line" id="L1217">                    .tcele,</span>
+<span class="line" id="L1218">                    .thumb,</span>
+<span class="line" id="L1219">                    .thumbeb,</span>
+<span class="line" id="L1220">                    .x86,</span>
+<span class="line" id="L1221">                    .xcore,</span>
+<span class="line" id="L1222">                    .nvptx,</span>
+<span class="line" id="L1223">                    .amdil,</span>
+<span class="line" id="L1224">                    .hsail,</span>
+<span class="line" id="L1225">                    .spir,</span>
+<span class="line" id="L1226">                    .kalimba,</span>
+<span class="line" id="L1227">                    .shave,</span>
+<span class="line" id="L1228">                    .lanai,</span>
+<span class="line" id="L1229">                    .wasm32,</span>
+<span class="line" id="L1230">                    .renderscript32,</span>
+<span class="line" id="L1231">                    .aarch64_32,</span>
+<span class="line" id="L1232">                    .spirv32,</span>
+<span class="line" id="L1233">                    .loongarch32,</span>
+<span class="line" id="L1234">                    .dxil,</span>
+<span class="line" id="L1235">                    =&gt; <span class="tok-kw">return</span> <span class="tok-number">32</span>,</span>
+<span class="line" id="L1236"></span>
+<span class="line" id="L1237">                    .aarch64,</span>
+<span class="line" id="L1238">                    .aarch64_be,</span>
+<span class="line" id="L1239">                    .mips64,</span>
+<span class="line" id="L1240">                    .mips64el,</span>
+<span class="line" id="L1241">                    .powerpc64,</span>
+<span class="line" id="L1242">                    .powerpc64le,</span>
+<span class="line" id="L1243">                    .riscv64,</span>
+<span class="line" id="L1244">                    .x86_64,</span>
+<span class="line" id="L1245">                    .nvptx64,</span>
+<span class="line" id="L1246">                    .le64,</span>
+<span class="line" id="L1247">                    .amdil64,</span>
+<span class="line" id="L1248">                    .hsail64,</span>
+<span class="line" id="L1249">                    .spir64,</span>
+<span class="line" id="L1250">                    .wasm64,</span>
+<span class="line" id="L1251">                    .renderscript64,</span>
+<span class="line" id="L1252">                    .amdgcn,</span>
+<span class="line" id="L1253">                    .bpfel,</span>
+<span class="line" id="L1254">                    .bpfeb,</span>
+<span class="line" id="L1255">                    .sparc64,</span>
+<span class="line" id="L1256">                    .s390x,</span>
+<span class="line" id="L1257">                    .ve,</span>
+<span class="line" id="L1258">                    .spirv64,</span>
+<span class="line" id="L1259">                    .loongarch64,</span>
+<span class="line" id="L1260">                    =&gt; <span class="tok-kw">return</span> <span class="tok-number">64</span>,</span>
+<span class="line" id="L1261">                }</span>
+<span class="line" id="L1262">            }</span>
+<span class="line" id="L1263"></span>
+<span class="line" id="L1264">            <span class="tok-comment">/// Returns a name that matches the lib/std/target/* source file name.</span></span>
+<span class="line" id="L1265">            <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">genericName</span>(arch: Arch) []<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
+<span class="line" id="L1266">                <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (arch) {</span>
+<span class="line" id="L1267">                    .arm, .armeb, .thumb, .thumbeb =&gt; <span class="tok-str">&quot;arm&quot;</span>,</span>
+<span class="line" id="L1268">                    .aarch64, .aarch64_be, .aarch64_32 =&gt; <span class="tok-str">&quot;aarch64&quot;</span>,</span>
+<span class="line" id="L1269">                    .bpfel, .bpfeb =&gt; <span class="tok-str">&quot;bpf&quot;</span>,</span>
+<span class="line" id="L1270">                    .mips, .mipsel, .mips64, .mips64el =&gt; <span class="tok-str">&quot;mips&quot;</span>,</span>
+<span class="line" id="L1271">                    .powerpc, .powerpcle, .powerpc64, .powerpc64le =&gt; <span class="tok-str">&quot;powerpc&quot;</span>,</span>
+<span class="line" id="L1272">                    .amdgcn =&gt; <span class="tok-str">&quot;amdgpu&quot;</span>,</span>
+<span class="line" id="L1273">                    .riscv32, .riscv64 =&gt; <span class="tok-str">&quot;riscv&quot;</span>,</span>
+<span class="line" id="L1274">                    .sparc, .sparc64, .sparcel =&gt; <span class="tok-str">&quot;sparc&quot;</span>,</span>
+<span class="line" id="L1275">                    .s390x =&gt; <span class="tok-str">&quot;s390x&quot;</span>,</span>
+<span class="line" id="L1276">                    .x86, .x86_64 =&gt; <span class="tok-str">&quot;x86&quot;</span>,</span>
+<span class="line" id="L1277">                    .nvptx, .nvptx64 =&gt; <span class="tok-str">&quot;nvptx&quot;</span>,</span>
+<span class="line" id="L1278">                    .wasm32, .wasm64 =&gt; <span class="tok-str">&quot;wasm&quot;</span>,</span>
+<span class="line" id="L1279">                    .spirv32, .spirv64 =&gt; <span class="tok-str">&quot;spir-v&quot;</span>,</span>
+<span class="line" id="L1280">                    <span class="tok-kw">else</span> =&gt; <span class="tok-builtin">@tagName</span>(arch),</span>
+<span class="line" id="L1281">                };</span>
+<span class="line" id="L1282">            }</span>
+<span class="line" id="L1283"></span>
+<span class="line" id="L1284">            <span class="tok-comment">/// All CPU features Zig is aware of, sorted lexicographically by name.</span></span>
+<span class="line" id="L1285">            <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">allFeaturesList</span>(arch: Arch) []<span class="tok-kw">const</span> Cpu.Feature {</span>
+<span class="line" id="L1286">                <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (arch) {</span>
+<span class="line" id="L1287">                    .arm, .armeb, .thumb, .thumbeb =&gt; &amp;arm.all_features,</span>
+<span class="line" id="L1288">                    .aarch64, .aarch64_be, .aarch64_32 =&gt; &amp;aarch64.all_features,</span>
+<span class="line" id="L1289">                    .avr =&gt; &amp;avr.all_features,</span>
+<span class="line" id="L1290">                    .bpfel, .bpfeb =&gt; &amp;bpf.all_features,</span>
+<span class="line" id="L1291">                    .hexagon =&gt; &amp;hexagon.all_features,</span>
+<span class="line" id="L1292">                    .mips, .mipsel, .mips64, .mips64el =&gt; &amp;mips.all_features,</span>
+<span class="line" id="L1293">                    .msp430 =&gt; &amp;msp430.all_features,</span>
+<span class="line" id="L1294">                    .powerpc, .powerpcle, .powerpc64, .powerpc64le =&gt; &amp;powerpc.all_features,</span>
+<span class="line" id="L1295">                    .amdgcn =&gt; &amp;amdgpu.all_features,</span>
+<span class="line" id="L1296">                    .riscv32, .riscv64 =&gt; &amp;riscv.all_features,</span>
+<span class="line" id="L1297">                    .sparc, .sparc64, .sparcel =&gt; &amp;sparc.all_features,</span>
+<span class="line" id="L1298">                    .spirv32, .spirv64 =&gt; &amp;spirv.all_features,</span>
+<span class="line" id="L1299">                    .s390x =&gt; &amp;s390x.all_features,</span>
+<span class="line" id="L1300">                    .x86, .x86_64 =&gt; &amp;x86.all_features,</span>
+<span class="line" id="L1301">                    .nvptx, .nvptx64 =&gt; &amp;nvptx.all_features,</span>
+<span class="line" id="L1302">                    .ve =&gt; &amp;ve.all_features,</span>
+<span class="line" id="L1303">                    .wasm32, .wasm64 =&gt; &amp;wasm.all_features,</span>
+<span class="line" id="L1304"></span>
+<span class="line" id="L1305">                    <span class="tok-kw">else</span> =&gt; &amp;[<span class="tok-number">0</span>]Cpu.Feature{},</span>
+<span class="line" id="L1306">                };</span>
+<span class="line" id="L1307">            }</span>
+<span class="line" id="L1308"></span>
+<span class="line" id="L1309">            <span class="tok-comment">/// All processors Zig is aware of, sorted lexicographically by name.</span></span>
+<span class="line" id="L1310">            <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">allCpuModels</span>(arch: Arch) []<span class="tok-kw">const</span> *<span class="tok-kw">const</span> Cpu.Model {</span>
+<span class="line" id="L1311">                <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (arch) {</span>
+<span class="line" id="L1312">                    .arm, .armeb, .thumb, .thumbeb =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(arm.cpu),</span>
+<span class="line" id="L1313">                    .aarch64, .aarch64_be, .aarch64_32 =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(aarch64.cpu),</span>
+<span class="line" id="L1314">                    .avr =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(avr.cpu),</span>
+<span class="line" id="L1315">                    .bpfel, .bpfeb =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(bpf.cpu),</span>
+<span class="line" id="L1316">                    .hexagon =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(hexagon.cpu),</span>
+<span class="line" id="L1317">                    .mips, .mipsel, .mips64, .mips64el =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(mips.cpu),</span>
+<span class="line" id="L1318">                    .msp430 =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(msp430.cpu),</span>
+<span class="line" id="L1319">                    .powerpc, .powerpcle, .powerpc64, .powerpc64le =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(powerpc.cpu),</span>
+<span class="line" id="L1320">                    .amdgcn =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(amdgpu.cpu),</span>
+<span class="line" id="L1321">                    .riscv32, .riscv64 =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(riscv.cpu),</span>
+<span class="line" id="L1322">                    .sparc, .sparc64, .sparcel =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(sparc.cpu),</span>
+<span class="line" id="L1323">                    .s390x =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(s390x.cpu),</span>
+<span class="line" id="L1324">                    .x86, .x86_64 =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(x86.cpu),</span>
+<span class="line" id="L1325">                    .nvptx, .nvptx64 =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(nvptx.cpu),</span>
+<span class="line" id="L1326">                    .ve =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(ve.cpu),</span>
+<span class="line" id="L1327">                    .wasm32, .wasm64 =&gt; <span class="tok-kw">comptime</span> allCpusFromDecls(wasm.cpu),</span>
+<span class="line" id="L1328"></span>
+<span class="line" id="L1329">                    <span class="tok-kw">else</span> =&gt; &amp;[<span class="tok-number">0</span>]*<span class="tok-kw">const</span> Model{},</span>
+<span class="line" id="L1330">                };</span>
+<span class="line" id="L1331">            }</span>
+<span class="line" id="L1332"></span>
+<span class="line" id="L1333">            <span class="tok-kw">fn</span> <span class="tok-fn">allCpusFromDecls</span>(<span class="tok-kw">comptime</span> cpus: <span class="tok-type">type</span>) []<span class="tok-kw">const</span> *<span class="tok-kw">const</span> Cpu.Model {</span>
+<span class="line" id="L1334">                <span class="tok-kw">const</span> decls = <span class="tok-builtin">@typeInfo</span>(cpus).Struct.decls;</span>
+<span class="line" id="L1335">                <span class="tok-kw">var</span> array: [decls.len]*<span class="tok-kw">const</span> Cpu.Model = <span class="tok-null">undefined</span>;</span>
+<span class="line" id="L1336">                <span class="tok-kw">for</span> (decls) |decl, i| {</span>
+<span class="line" id="L1337">                    array[i] = &amp;<span class="tok-builtin">@field</span>(cpus, decl.name);</span>
+<span class="line" id="L1338">                }</span>
+<span class="line" id="L1339">                <span class="tok-kw">return</span> &amp;array;</span>
+<span class="line" id="L1340">            }</span>
+<span class="line" id="L1341">        };</span>
+<span class="line" id="L1342"></span>
+<span class="line" id="L1343">        <span class="tok-kw">pub</span> <span class="tok-kw">const</span> Model = <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L1344">            name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
+<span class="line" id="L1345">            llvm_name: ?[:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
+<span class="line" id="L1346">            features: Feature.Set,</span>
+<span class="line" id="L1347"></span>
+<span class="line" id="L1348">            <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">toCpu</span>(model: *<span class="tok-kw">const</span> Model, arch: Arch) Cpu {</span>
+<span class="line" id="L1349">                <span class="tok-kw">var</span> features = model.features;</span>
+<span class="line" id="L1350">                features.populateDependencies(arch.allFeaturesList());</span>
+<span class="line" id="L1351">                <span class="tok-kw">return</span> .{</span>
+<span class="line" id="L1352">                    .arch = arch,</span>
+<span class="line" id="L1353">                    .model = model,</span>
+<span class="line" id="L1354">                    .features = features,</span>
+<span class="line" id="L1355">                };</span>
+<span class="line" id="L1356">            }</span>
+<span class="line" id="L1357"></span>
+<span class="line" id="L1358">            <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">generic</span>(arch: Arch) *<span class="tok-kw">const</span> Model {</span>
+<span class="line" id="L1359">                <span class="tok-kw">const</span> S = <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L1360">                    <span class="tok-kw">const</span> generic_model = Model{</span>
+<span class="line" id="L1361">                        .name = <span class="tok-str">&quot;generic&quot;</span>,</span>
+<span class="line" id="L1362">                        .llvm_name = <span class="tok-null">null</span>,</span>
+<span class="line" id="L1363">                        .features = Cpu.Feature.Set.empty,</span>
+<span class="line" id="L1364">                    };</span>
+<span class="line" id="L1365">                };</span>
+<span class="line" id="L1366">                <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (arch) {</span>
+<span class="line" id="L1367">                    .arm, .armeb, .thumb, .thumbeb =&gt; &amp;arm.cpu.generic,</span>
+<span class="line" id="L1368">                    .aarch64, .aarch64_be, .aarch64_32 =&gt; &amp;aarch64.cpu.generic,</span>
+<span class="line" id="L1369">                    .avr =&gt; &amp;avr.cpu.avr2,</span>
+<span class="line" id="L1370">                    .bpfel, .bpfeb =&gt; &amp;bpf.cpu.generic,</span>
+<span class="line" id="L1371">                    .hexagon =&gt; &amp;hexagon.cpu.generic,</span>
+<span class="line" id="L1372">                    .m68k =&gt; &amp;m68k.cpu.generic,</span>
+<span class="line" id="L1373">                    .mips, .mipsel =&gt; &amp;mips.cpu.mips32,</span>
+<span class="line" id="L1374">                    .mips64, .mips64el =&gt; &amp;mips.cpu.mips64,</span>
+<span class="line" id="L1375">                    .msp430 =&gt; &amp;msp430.cpu.generic,</span>
+<span class="line" id="L1376">                    .powerpc =&gt; &amp;powerpc.cpu.ppc,</span>
+<span class="line" id="L1377">                    .powerpcle =&gt; &amp;powerpc.cpu.ppc,</span>
+<span class="line" id="L1378">                    .powerpc64 =&gt; &amp;powerpc.cpu.ppc64,</span>
+<span class="line" id="L1379">                    .powerpc64le =&gt; &amp;powerpc.cpu.ppc64le,</span>
+<span class="line" id="L1380">                    .amdgcn =&gt; &amp;amdgpu.cpu.generic,</span>
+<span class="line" id="L1381">                    .riscv32 =&gt; &amp;riscv.cpu.generic_rv32,</span>
+<span class="line" id="L1382">                    .riscv64 =&gt; &amp;riscv.cpu.generic_rv64,</span>
+<span class="line" id="L1383">                    .sparc, .sparcel =&gt; &amp;sparc.cpu.generic,</span>
+<span class="line" id="L1384">                    .sparc64 =&gt; &amp;sparc.cpu.v9, <span class="tok-comment">// 64-bit SPARC needs v9 as the baseline</span>
+</span>
+<span class="line" id="L1385">                    .s390x =&gt; &amp;s390x.cpu.generic,</span>
+<span class="line" id="L1386">                    .x86 =&gt; &amp;x86.cpu.<span class="tok-type">i386</span>,</span>
+<span class="line" id="L1387">                    .x86_64 =&gt; &amp;x86.cpu.x86_64,</span>
+<span class="line" id="L1388">                    .nvptx, .nvptx64 =&gt; &amp;nvptx.cpu.sm_20,</span>
+<span class="line" id="L1389">                    .ve =&gt; &amp;ve.cpu.generic,</span>
+<span class="line" id="L1390">                    .wasm32, .wasm64 =&gt; &amp;wasm.cpu.generic,</span>
 <span class="line" id="L1391"></span>
-<span class="line" id="L1392">            <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">baseline</span>(arch: Arch) *<span class="tok-kw">const</span> Model {</span>
-<span class="line" id="L1393">                <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (arch) {</span>
-<span class="line" id="L1394">                    .arm, .armeb, .thumb, .thumbeb =&gt; &amp;arm.cpu.baseline,</span>
-<span class="line" id="L1395">                    .riscv32 =&gt; &amp;riscv.cpu.baseline_rv32,</span>
-<span class="line" id="L1396">                    .riscv64 =&gt; &amp;riscv.cpu.baseline_rv64,</span>
-<span class="line" id="L1397">                    .x86 =&gt; &amp;x86.cpu.pentium4,</span>
-<span class="line" id="L1398">                    .nvptx, .nvptx64 =&gt; &amp;nvptx.cpu.sm_20,</span>
-<span class="line" id="L1399">                    .sparc, .sparcel =&gt; &amp;sparc.cpu.v8,</span>
-<span class="line" id="L1400"></span>
-<span class="line" id="L1401">                    <span class="tok-kw">else</span> =&gt; generic(arch),</span>
-<span class="line" id="L1402">                };</span>
-<span class="line" id="L1403">            }</span>
-<span class="line" id="L1404">        };</span>
-<span class="line" id="L1405"></span>
-<span class="line" id="L1406">        <span class="tok-comment">/// The &quot;default&quot; set of CPU features for cross-compiling. A conservative set</span></span>
-<span class="line" id="L1407">        <span class="tok-comment">/// of features that is expected to be supported on most available hardware.</span></span>
-<span class="line" id="L1408">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">baseline</span>(arch: Arch) Cpu {</span>
-<span class="line" id="L1409">            <span class="tok-kw">return</span> Model.baseline(arch).toCpu(arch);</span>
-<span class="line" id="L1410">        }</span>
-<span class="line" id="L1411">    };</span>
-<span class="line" id="L1412"></span>
-<span class="line" id="L1413">    <span class="tok-kw">pub</span> <span class="tok-kw">const</span> stack_align = <span class="tok-number">16</span>;</span>
-<span class="line" id="L1414"></span>
-<span class="line" id="L1415">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">zigTriple</span>(self: Target, allocator: mem.Allocator) ![]<span class="tok-type">u8</span> {</span>
-<span class="line" id="L1416">        <span class="tok-kw">return</span> std.zig.CrossTarget.fromTarget(self).zigTriple(allocator);</span>
-<span class="line" id="L1417">    }</span>
+<span class="line" id="L1392">                    <span class="tok-kw">else</span> =&gt; &amp;S.generic_model,</span>
+<span class="line" id="L1393">                };</span>
+<span class="line" id="L1394">            }</span>
+<span class="line" id="L1395"></span>
+<span class="line" id="L1396">            <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">baseline</span>(arch: Arch) *<span class="tok-kw">const</span> Model {</span>
+<span class="line" id="L1397">                <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (arch) {</span>
+<span class="line" id="L1398">                    .arm, .armeb, .thumb, .thumbeb =&gt; &amp;arm.cpu.baseline,</span>
+<span class="line" id="L1399">                    .riscv32 =&gt; &amp;riscv.cpu.baseline_rv32,</span>
+<span class="line" id="L1400">                    .riscv64 =&gt; &amp;riscv.cpu.baseline_rv64,</span>
+<span class="line" id="L1401">                    .x86 =&gt; &amp;x86.cpu.pentium4,</span>
+<span class="line" id="L1402">                    .nvptx, .nvptx64 =&gt; &amp;nvptx.cpu.sm_20,</span>
+<span class="line" id="L1403">                    .sparc, .sparcel =&gt; &amp;sparc.cpu.v8,</span>
+<span class="line" id="L1404"></span>
+<span class="line" id="L1405">                    <span class="tok-kw">else</span> =&gt; generic(arch),</span>
+<span class="line" id="L1406">                };</span>
+<span class="line" id="L1407">            }</span>
+<span class="line" id="L1408">        };</span>
+<span class="line" id="L1409"></span>
+<span class="line" id="L1410">        <span class="tok-comment">/// The &quot;default&quot; set of CPU features for cross-compiling. A conservative set</span></span>
+<span class="line" id="L1411">        <span class="tok-comment">/// of features that is expected to be supported on most available hardware.</span></span>
+<span class="line" id="L1412">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">baseline</span>(arch: Arch) Cpu {</span>
+<span class="line" id="L1413">            <span class="tok-kw">return</span> Model.baseline(arch).toCpu(arch);</span>
+<span class="line" id="L1414">        }</span>
+<span class="line" id="L1415">    };</span>
+<span class="line" id="L1416"></span>
+<span class="line" id="L1417">    <span class="tok-kw">pub</span> <span class="tok-kw">const</span> stack_align = <span class="tok-number">16</span>;</span>
 <span class="line" id="L1418"></span>
-<span class="line" id="L1419">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">linuxTripleSimple</span>(allocator: mem.Allocator, cpu_arch: Cpu.Arch, os_tag: Os.Tag, abi: Abi) ![]<span class="tok-type">u8</span> {</span>
-<span class="line" id="L1420">        <span class="tok-kw">return</span> std.fmt.allocPrint(allocator, <span class="tok-str">&quot;{s}-{s}-{s}&quot;</span>, .{ <span class="tok-builtin">@tagName</span>(cpu_arch), <span class="tok-builtin">@tagName</span>(os_tag), <span class="tok-builtin">@tagName</span>(abi) });</span>
+<span class="line" id="L1419">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">zigTriple</span>(self: Target, allocator: mem.Allocator) ![]<span class="tok-type">u8</span> {</span>
+<span class="line" id="L1420">        <span class="tok-kw">return</span> std.zig.CrossTarget.fromTarget(self).zigTriple(allocator);</span>
 <span class="line" id="L1421">    }</span>
 <span class="line" id="L1422"></span>
-<span class="line" id="L1423">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">linuxTriple</span>(self: Target, allocator: mem.Allocator) ![]<span class="tok-type">u8</span> {</span>
-<span class="line" id="L1424">        <span class="tok-kw">return</span> linuxTripleSimple(allocator, self.cpu.arch, self.os.tag, self.abi);</span>
+<span class="line" id="L1423">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">linuxTripleSimple</span>(allocator: mem.Allocator, cpu_arch: Cpu.Arch, os_tag: Os.Tag, abi: Abi) ![]<span class="tok-type">u8</span> {</span>
+<span class="line" id="L1424">        <span class="tok-kw">return</span> std.fmt.allocPrint(allocator, <span class="tok-str">&quot;{s}-{s}-{s}&quot;</span>, .{ <span class="tok-builtin">@tagName</span>(cpu_arch), <span class="tok-builtin">@tagName</span>(os_tag), <span class="tok-builtin">@tagName</span>(abi) });</span>
 <span class="line" id="L1425">    }</span>
 <span class="line" id="L1426"></span>
-<span class="line" id="L1427">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">exeFileExtSimple</span>(cpu_arch: Cpu.Arch, os_tag: Os.Tag) [:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
-<span class="line" id="L1428">        <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (os_tag) {</span>
-<span class="line" id="L1429">            .windows =&gt; <span class="tok-str">&quot;.exe&quot;</span>,</span>
-<span class="line" id="L1430">            .uefi =&gt; <span class="tok-str">&quot;.efi&quot;</span>,</span>
-<span class="line" id="L1431">            .plan9 =&gt; plan9Ext(cpu_arch),</span>
-<span class="line" id="L1432">            <span class="tok-kw">else</span> =&gt; <span class="tok-kw">switch</span> (cpu_arch) {</span>
-<span class="line" id="L1433">                .wasm32, .wasm64 =&gt; <span class="tok-str">&quot;.wasm&quot;</span>,</span>
-<span class="line" id="L1434">                <span class="tok-kw">else</span> =&gt; <span class="tok-str">&quot;&quot;</span>,</span>
-<span class="line" id="L1435">            },</span>
-<span class="line" id="L1436">        };</span>
-<span class="line" id="L1437">    }</span>
-<span class="line" id="L1438"></span>
-<span class="line" id="L1439">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">exeFileExt</span>(self: Target) [:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
-<span class="line" id="L1440">        <span class="tok-kw">return</span> exeFileExtSimple(self.cpu.arch, self.os.tag);</span>
+<span class="line" id="L1427">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">linuxTriple</span>(self: Target, allocator: mem.Allocator) ![]<span class="tok-type">u8</span> {</span>
+<span class="line" id="L1428">        <span class="tok-kw">return</span> linuxTripleSimple(allocator, self.cpu.arch, self.os.tag, self.abi);</span>
+<span class="line" id="L1429">    }</span>
+<span class="line" id="L1430"></span>
+<span class="line" id="L1431">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">exeFileExtSimple</span>(cpu_arch: Cpu.Arch, os_tag: Os.Tag) [:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
+<span class="line" id="L1432">        <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (os_tag) {</span>
+<span class="line" id="L1433">            .windows =&gt; <span class="tok-str">&quot;.exe&quot;</span>,</span>
+<span class="line" id="L1434">            .uefi =&gt; <span class="tok-str">&quot;.efi&quot;</span>,</span>
+<span class="line" id="L1435">            .plan9 =&gt; plan9Ext(cpu_arch),</span>
+<span class="line" id="L1436">            <span class="tok-kw">else</span> =&gt; <span class="tok-kw">switch</span> (cpu_arch) {</span>
+<span class="line" id="L1437">                .wasm32, .wasm64 =&gt; <span class="tok-str">&quot;.wasm&quot;</span>,</span>
+<span class="line" id="L1438">                <span class="tok-kw">else</span> =&gt; <span class="tok-str">&quot;&quot;</span>,</span>
+<span class="line" id="L1439">            },</span>
+<span class="line" id="L1440">        };</span>
 <span class="line" id="L1441">    }</span>
 <span class="line" id="L1442"></span>
-<span class="line" id="L1443">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">staticLibSuffix_os_abi</span>(os_tag: Os.Tag, abi: Abi) [:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
-<span class="line" id="L1444">        <span class="tok-kw">if</span> (abi == .msvc) {</span>
-<span class="line" id="L1445">            <span class="tok-kw">return</span> <span class="tok-str">&quot;.lib&quot;</span>;</span>
-<span class="line" id="L1446">        }</span>
-<span class="line" id="L1447">        <span class="tok-kw">switch</span> (os_tag) {</span>
-<span class="line" id="L1448">            .windows, .uefi =&gt; <span class="tok-kw">return</span> <span class="tok-str">&quot;.lib&quot;</span>,</span>
-<span class="line" id="L1449">            <span class="tok-kw">else</span> =&gt; <span class="tok-kw">return</span> <span class="tok-str">&quot;.a&quot;</span>,</span>
+<span class="line" id="L1443">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">exeFileExt</span>(self: Target) [:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
+<span class="line" id="L1444">        <span class="tok-kw">return</span> exeFileExtSimple(self.cpu.arch, self.os.tag);</span>
+<span class="line" id="L1445">    }</span>
+<span class="line" id="L1446"></span>
+<span class="line" id="L1447">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">staticLibSuffix_os_abi</span>(os_tag: Os.Tag, abi: Abi) [:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
+<span class="line" id="L1448">        <span class="tok-kw">if</span> (abi == .msvc) {</span>
+<span class="line" id="L1449">            <span class="tok-kw">return</span> <span class="tok-str">&quot;.lib&quot;</span>;</span>
 <span class="line" id="L1450">        }</span>
-<span class="line" id="L1451">    }</span>
-<span class="line" id="L1452"></span>
-<span class="line" id="L1453">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">staticLibSuffix</span>(self: Target) [:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
-<span class="line" id="L1454">        <span class="tok-kw">return</span> staticLibSuffix_os_abi(self.os.tag, self.abi);</span>
+<span class="line" id="L1451">        <span class="tok-kw">switch</span> (os_tag) {</span>
+<span class="line" id="L1452">            .windows, .uefi =&gt; <span class="tok-kw">return</span> <span class="tok-str">&quot;.lib&quot;</span>,</span>
+<span class="line" id="L1453">            <span class="tok-kw">else</span> =&gt; <span class="tok-kw">return</span> <span class="tok-str">&quot;.a&quot;</span>,</span>
+<span class="line" id="L1454">        }</span>
 <span class="line" id="L1455">    }</span>
 <span class="line" id="L1456"></span>
-<span class="line" id="L1457">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">dynamicLibSuffix</span>(self: Target) [:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
-<span class="line" id="L1458">        <span class="tok-kw">return</span> self.os.tag.dynamicLibSuffix();</span>
+<span class="line" id="L1457">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">staticLibSuffix</span>(self: Target) [:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
+<span class="line" id="L1458">        <span class="tok-kw">return</span> staticLibSuffix_os_abi(self.os.tag, self.abi);</span>
 <span class="line" id="L1459">    }</span>
 <span class="line" id="L1460"></span>
-<span class="line" id="L1461">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">libPrefix_os_abi</span>(os_tag: Os.Tag, abi: Abi) [:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
-<span class="line" id="L1462">        <span class="tok-kw">if</span> (abi == .msvc) {</span>
-<span class="line" id="L1463">            <span class="tok-kw">return</span> <span class="tok-str">&quot;&quot;</span>;</span>
-<span class="line" id="L1464">        }</span>
-<span class="line" id="L1465">        <span class="tok-kw">switch</span> (os_tag) {</span>
-<span class="line" id="L1466">            .windows, .uefi =&gt; <span class="tok-kw">return</span> <span class="tok-str">&quot;&quot;</span>,</span>
-<span class="line" id="L1467">            <span class="tok-kw">else</span> =&gt; <span class="tok-kw">return</span> <span class="tok-str">&quot;lib&quot;</span>,</span>
+<span class="line" id="L1461">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">dynamicLibSuffix</span>(self: Target) [:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
+<span class="line" id="L1462">        <span class="tok-kw">return</span> self.os.tag.dynamicLibSuffix();</span>
+<span class="line" id="L1463">    }</span>
+<span class="line" id="L1464"></span>
+<span class="line" id="L1465">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">libPrefix_os_abi</span>(os_tag: Os.Tag, abi: Abi) [:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
+<span class="line" id="L1466">        <span class="tok-kw">if</span> (abi == .msvc) {</span>
+<span class="line" id="L1467">            <span class="tok-kw">return</span> <span class="tok-str">&quot;&quot;</span>;</span>
 <span class="line" id="L1468">        }</span>
-<span class="line" id="L1469">    }</span>
-<span class="line" id="L1470"></span>
-<span class="line" id="L1471">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">libPrefix</span>(self: Target) [:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
-<span class="line" id="L1472">        <span class="tok-kw">return</span> libPrefix_os_abi(self.os.tag, self.abi);</span>
+<span class="line" id="L1469">        <span class="tok-kw">switch</span> (os_tag) {</span>
+<span class="line" id="L1470">            .windows, .uefi =&gt; <span class="tok-kw">return</span> <span class="tok-str">&quot;&quot;</span>,</span>
+<span class="line" id="L1471">            <span class="tok-kw">else</span> =&gt; <span class="tok-kw">return</span> <span class="tok-str">&quot;lib&quot;</span>,</span>
+<span class="line" id="L1472">        }</span>
 <span class="line" id="L1473">    }</span>
 <span class="line" id="L1474"></span>
-<span class="line" id="L1475">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isMinGW</span>(self: Target) <span class="tok-type">bool</span> {</span>
-<span class="line" id="L1476">        <span class="tok-kw">return</span> self.os.tag == .windows <span class="tok-kw">and</span> self.isGnu();</span>
+<span class="line" id="L1475">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">libPrefix</span>(self: Target) [:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
+<span class="line" id="L1476">        <span class="tok-kw">return</span> libPrefix_os_abi(self.os.tag, self.abi);</span>
 <span class="line" id="L1477">    }</span>
 <span class="line" id="L1478"></span>
-<span class="line" id="L1479">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isGnu</span>(self: Target) <span class="tok-type">bool</span> {</span>
-<span class="line" id="L1480">        <span class="tok-kw">return</span> self.abi.isGnu();</span>
+<span class="line" id="L1479">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isMinGW</span>(self: Target) <span class="tok-type">bool</span> {</span>
+<span class="line" id="L1480">        <span class="tok-kw">return</span> self.os.tag == .windows <span class="tok-kw">and</span> self.isGnu();</span>
 <span class="line" id="L1481">    }</span>
 <span class="line" id="L1482"></span>
-<span class="line" id="L1483">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isMusl</span>(self: Target) <span class="tok-type">bool</span> {</span>
-<span class="line" id="L1484">        <span class="tok-kw">return</span> self.abi.isMusl();</span>
+<span class="line" id="L1483">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isGnu</span>(self: Target) <span class="tok-type">bool</span> {</span>
+<span class="line" id="L1484">        <span class="tok-kw">return</span> self.abi.isGnu();</span>
 <span class="line" id="L1485">    }</span>
 <span class="line" id="L1486"></span>
-<span class="line" id="L1487">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isAndroid</span>(self: Target) <span class="tok-type">bool</span> {</span>
-<span class="line" id="L1488">        <span class="tok-kw">return</span> self.abi == .android;</span>
+<span class="line" id="L1487">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isMusl</span>(self: Target) <span class="tok-type">bool</span> {</span>
+<span class="line" id="L1488">        <span class="tok-kw">return</span> self.abi.isMusl();</span>
 <span class="line" id="L1489">    }</span>
 <span class="line" id="L1490"></span>
-<span class="line" id="L1491">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isWasm</span>(self: Target) <span class="tok-type">bool</span> {</span>
-<span class="line" id="L1492">        <span class="tok-kw">return</span> self.cpu.arch.isWasm();</span>
+<span class="line" id="L1491">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isAndroid</span>(self: Target) <span class="tok-type">bool</span> {</span>
+<span class="line" id="L1492">        <span class="tok-kw">return</span> self.abi == .android;</span>
 <span class="line" id="L1493">    }</span>
 <span class="line" id="L1494"></span>
-<span class="line" id="L1495">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isDarwin</span>(self: Target) <span class="tok-type">bool</span> {</span>
-<span class="line" id="L1496">        <span class="tok-kw">return</span> self.os.tag.isDarwin();</span>
+<span class="line" id="L1495">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isWasm</span>(self: Target) <span class="tok-type">bool</span> {</span>
+<span class="line" id="L1496">        <span class="tok-kw">return</span> self.cpu.arch.isWasm();</span>
 <span class="line" id="L1497">    }</span>
 <span class="line" id="L1498"></span>
-<span class="line" id="L1499">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isBSD</span>(self: Target) <span class="tok-type">bool</span> {</span>
-<span class="line" id="L1500">        <span class="tok-kw">return</span> self.os.tag.isBSD();</span>
+<span class="line" id="L1499">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isDarwin</span>(self: Target) <span class="tok-type">bool</span> {</span>
+<span class="line" id="L1500">        <span class="tok-kw">return</span> self.os.tag.isDarwin();</span>
 <span class="line" id="L1501">    }</span>
 <span class="line" id="L1502"></span>
-<span class="line" id="L1503">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isBpfFreestanding</span>(self: Target) <span class="tok-type">bool</span> {</span>
-<span class="line" id="L1504">        <span class="tok-kw">return</span> self.cpu.arch.isBpf() <span class="tok-kw">and</span> self.os.tag == .freestanding;</span>
+<span class="line" id="L1503">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isBSD</span>(self: Target) <span class="tok-type">bool</span> {</span>
+<span class="line" id="L1504">        <span class="tok-kw">return</span> self.os.tag.isBSD();</span>
 <span class="line" id="L1505">    }</span>
 <span class="line" id="L1506"></span>
-<span class="line" id="L1507">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isGnuLibC_os_tag_abi</span>(os_tag: Os.Tag, abi: Abi) <span class="tok-type">bool</span> {</span>
-<span class="line" id="L1508">        <span class="tok-kw">return</span> os_tag == .linux <span class="tok-kw">and</span> abi.isGnu();</span>
+<span class="line" id="L1507">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isBpfFreestanding</span>(self: Target) <span class="tok-type">bool</span> {</span>
+<span class="line" id="L1508">        <span class="tok-kw">return</span> self.cpu.arch.isBpf() <span class="tok-kw">and</span> self.os.tag == .freestanding;</span>
 <span class="line" id="L1509">    }</span>
 <span class="line" id="L1510"></span>
-<span class="line" id="L1511">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isGnuLibC</span>(self: Target) <span class="tok-type">bool</span> {</span>
-<span class="line" id="L1512">        <span class="tok-kw">return</span> isGnuLibC_os_tag_abi(self.os.tag, self.abi);</span>
+<span class="line" id="L1511">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isGnuLibC_os_tag_abi</span>(os_tag: Os.Tag, abi: Abi) <span class="tok-type">bool</span> {</span>
+<span class="line" id="L1512">        <span class="tok-kw">return</span> os_tag == .linux <span class="tok-kw">and</span> abi.isGnu();</span>
 <span class="line" id="L1513">    }</span>
 <span class="line" id="L1514"></span>
-<span class="line" id="L1515">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">supportsNewStackCall</span>(self: Target) <span class="tok-type">bool</span> {</span>
-<span class="line" id="L1516">        <span class="tok-kw">return</span> !self.cpu.arch.isWasm();</span>
+<span class="line" id="L1515">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isGnuLibC</span>(self: Target) <span class="tok-type">bool</span> {</span>
+<span class="line" id="L1516">        <span class="tok-kw">return</span> isGnuLibC_os_tag_abi(self.os.tag, self.abi);</span>
 <span class="line" id="L1517">    }</span>
 <span class="line" id="L1518"></span>
-<span class="line" id="L1519">    <span class="tok-kw">pub</span> <span class="tok-kw">const</span> FloatAbi = <span class="tok-kw">enum</span> {</span>
-<span class="line" id="L1520">        hard,</span>
-<span class="line" id="L1521">        soft,</span>
-<span class="line" id="L1522">        soft_fp,</span>
-<span class="line" id="L1523">    };</span>
-<span class="line" id="L1524"></span>
-<span class="line" id="L1525">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">getFloatAbi</span>(self: Target) FloatAbi {</span>
-<span class="line" id="L1526">        <span class="tok-kw">return</span> self.abi.floatAbi();</span>
-<span class="line" id="L1527">    }</span>
+<span class="line" id="L1519">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">supportsNewStackCall</span>(self: Target) <span class="tok-type">bool</span> {</span>
+<span class="line" id="L1520">        <span class="tok-kw">return</span> !self.cpu.arch.isWasm();</span>
+<span class="line" id="L1521">    }</span>
+<span class="line" id="L1522"></span>
+<span class="line" id="L1523">    <span class="tok-kw">pub</span> <span class="tok-kw">const</span> FloatAbi = <span class="tok-kw">enum</span> {</span>
+<span class="line" id="L1524">        hard,</span>
+<span class="line" id="L1525">        soft,</span>
+<span class="line" id="L1526">        soft_fp,</span>
+<span class="line" id="L1527">    };</span>
 <span class="line" id="L1528"></span>
-<span class="line" id="L1529">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">hasDynamicLinker</span>(self: Target) <span class="tok-type">bool</span> {</span>
-<span class="line" id="L1530">        <span class="tok-kw">if</span> (self.cpu.arch.isWasm()) {</span>
-<span class="line" id="L1531">            <span class="tok-kw">return</span> <span class="tok-null">false</span>;</span>
-<span class="line" id="L1532">        }</span>
-<span class="line" id="L1533">        <span class="tok-kw">switch</span> (self.os.tag) {</span>
-<span class="line" id="L1534">            .freestanding,</span>
-<span class="line" id="L1535">            .ios,</span>
-<span class="line" id="L1536">            .tvos,</span>
-<span class="line" id="L1537">            .watchos,</span>
-<span class="line" id="L1538">            .macos,</span>
-<span class="line" id="L1539">            .uefi,</span>
-<span class="line" id="L1540">            .windows,</span>
-<span class="line" id="L1541">            .emscripten,</span>
-<span class="line" id="L1542">            .opencl,</span>
-<span class="line" id="L1543">            .glsl450,</span>
-<span class="line" id="L1544">            .vulkan,</span>
-<span class="line" id="L1545">            .plan9,</span>
-<span class="line" id="L1546">            .other,</span>
-<span class="line" id="L1547">            =&gt; <span class="tok-kw">return</span> <span class="tok-null">false</span>,</span>
-<span class="line" id="L1548">            <span class="tok-kw">else</span> =&gt; <span class="tok-kw">return</span> <span class="tok-null">true</span>,</span>
-<span class="line" id="L1549">        }</span>
-<span class="line" id="L1550">    }</span>
-<span class="line" id="L1551"></span>
-<span class="line" id="L1552">    <span class="tok-kw">pub</span> <span class="tok-kw">const</span> DynamicLinker = <span class="tok-kw">struct</span> {</span>
-<span class="line" id="L1553">        <span class="tok-comment">/// Contains the memory used to store the dynamic linker path. This field should</span></span>
-<span class="line" id="L1554">        <span class="tok-comment">/// not be used directly. See `get` and `set`. This field exists so that this API requires no allocator.</span></span>
-<span class="line" id="L1555">        buffer: [<span class="tok-number">255</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>,</span>
-<span class="line" id="L1556"></span>
-<span class="line" id="L1557">        <span class="tok-comment">/// Used to construct the dynamic linker path. This field should not be used</span></span>
-<span class="line" id="L1558">        <span class="tok-comment">/// directly. See `get` and `set`.</span></span>
-<span class="line" id="L1559">        max_byte: ?<span class="tok-type">u8</span> = <span class="tok-null">null</span>,</span>
+<span class="line" id="L1529">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">getFloatAbi</span>(self: Target) FloatAbi {</span>
+<span class="line" id="L1530">        <span class="tok-kw">return</span> self.abi.floatAbi();</span>
+<span class="line" id="L1531">    }</span>
+<span class="line" id="L1532"></span>
+<span class="line" id="L1533">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">hasDynamicLinker</span>(self: Target) <span class="tok-type">bool</span> {</span>
+<span class="line" id="L1534">        <span class="tok-kw">if</span> (self.cpu.arch.isWasm()) {</span>
+<span class="line" id="L1535">            <span class="tok-kw">return</span> <span class="tok-null">false</span>;</span>
+<span class="line" id="L1536">        }</span>
+<span class="line" id="L1537">        <span class="tok-kw">switch</span> (self.os.tag) {</span>
+<span class="line" id="L1538">            .freestanding,</span>
+<span class="line" id="L1539">            .ios,</span>
+<span class="line" id="L1540">            .tvos,</span>
+<span class="line" id="L1541">            .watchos,</span>
+<span class="line" id="L1542">            .macos,</span>
+<span class="line" id="L1543">            .uefi,</span>
+<span class="line" id="L1544">            .windows,</span>
+<span class="line" id="L1545">            .emscripten,</span>
+<span class="line" id="L1546">            .opencl,</span>
+<span class="line" id="L1547">            .glsl450,</span>
+<span class="line" id="L1548">            .vulkan,</span>
+<span class="line" id="L1549">            .plan9,</span>
+<span class="line" id="L1550">            .other,</span>
+<span class="line" id="L1551">            =&gt; <span class="tok-kw">return</span> <span class="tok-null">false</span>,</span>
+<span class="line" id="L1552">            <span class="tok-kw">else</span> =&gt; <span class="tok-kw">return</span> <span class="tok-null">true</span>,</span>
+<span class="line" id="L1553">        }</span>
+<span class="line" id="L1554">    }</span>
+<span class="line" id="L1555"></span>
+<span class="line" id="L1556">    <span class="tok-kw">pub</span> <span class="tok-kw">const</span> DynamicLinker = <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L1557">        <span class="tok-comment">/// Contains the memory used to store the dynamic linker path. This field should</span></span>
+<span class="line" id="L1558">        <span class="tok-comment">/// not be used directly. See `get` and `set`. This field exists so that this API requires no allocator.</span></span>
+<span class="line" id="L1559">        buffer: [<span class="tok-number">255</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>,</span>
 <span class="line" id="L1560"></span>
-<span class="line" id="L1561">        <span class="tok-comment">/// Asserts that the length is less than or equal to 255 bytes.</span></span>
-<span class="line" id="L1562">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">init</span>(dl_or_null: ?[]<span class="tok-kw">const</span> <span class="tok-type">u8</span>) DynamicLinker {</span>
-<span class="line" id="L1563">            <span class="tok-kw">var</span> result: DynamicLinker = <span class="tok-null">undefined</span>;</span>
-<span class="line" id="L1564">            result.set(dl_or_null);</span>
-<span class="line" id="L1565">            <span class="tok-kw">return</span> result;</span>
-<span class="line" id="L1566">        }</span>
-<span class="line" id="L1567"></span>
-<span class="line" id="L1568">        <span class="tok-comment">/// The returned memory has the same lifetime as the `DynamicLinker`.</span></span>
-<span class="line" id="L1569">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">get</span>(self: *<span class="tok-kw">const</span> DynamicLinker) ?[]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
-<span class="line" id="L1570">            <span class="tok-kw">const</span> m: <span class="tok-type">usize</span> = self.max_byte <span class="tok-kw">orelse</span> <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
-<span class="line" id="L1571">            <span class="tok-kw">return</span> self.buffer[<span class="tok-number">0</span> .. m + <span class="tok-number">1</span>];</span>
-<span class="line" id="L1572">        }</span>
-<span class="line" id="L1573"></span>
-<span class="line" id="L1574">        <span class="tok-comment">/// Asserts that the length is less than or equal to 255 bytes.</span></span>
-<span class="line" id="L1575">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">set</span>(self: *DynamicLinker, dl_or_null: ?[]<span class="tok-kw">const</span> <span class="tok-type">u8</span>) <span class="tok-type">void</span> {</span>
-<span class="line" id="L1576">            <span class="tok-kw">if</span> (dl_or_null) |dl| {</span>
-<span class="line" id="L1577">                mem.copy(<span class="tok-type">u8</span>, &amp;self.buffer, dl);</span>
-<span class="line" id="L1578">                self.max_byte = <span class="tok-builtin">@intCast</span>(<span class="tok-type">u8</span>, dl.len - <span class="tok-number">1</span>);</span>
-<span class="line" id="L1579">            } <span class="tok-kw">else</span> {</span>
-<span class="line" id="L1580">                self.max_byte = <span class="tok-null">null</span>;</span>
-<span class="line" id="L1581">            }</span>
-<span class="line" id="L1582">        }</span>
-<span class="line" id="L1583">    };</span>
-<span class="line" id="L1584"></span>
-<span class="line" id="L1585">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">standardDynamicLinkerPath</span>(self: Target) DynamicLinker {</span>
-<span class="line" id="L1586">        <span class="tok-kw">var</span> result: DynamicLinker = .{};</span>
-<span class="line" id="L1587">        <span class="tok-kw">const</span> S = <span class="tok-kw">struct</span> {</span>
-<span class="line" id="L1588">            <span class="tok-kw">fn</span> <span class="tok-fn">print</span>(r: *DynamicLinker, <span class="tok-kw">comptime</span> fmt: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>, args: <span class="tok-kw">anytype</span>) DynamicLinker {</span>
-<span class="line" id="L1589">                r.max_byte = <span class="tok-builtin">@intCast</span>(<span class="tok-type">u8</span>, (std.fmt.bufPrint(&amp;r.buffer, fmt, args) <span class="tok-kw">catch</span> <span class="tok-kw">unreachable</span>).len - <span class="tok-number">1</span>);</span>
-<span class="line" id="L1590">                <span class="tok-kw">return</span> r.*;</span>
-<span class="line" id="L1591">            }</span>
-<span class="line" id="L1592">            <span class="tok-kw">fn</span> <span class="tok-fn">copy</span>(r: *DynamicLinker, s: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>) DynamicLinker {</span>
-<span class="line" id="L1593">                mem.copy(<span class="tok-type">u8</span>, &amp;r.buffer, s);</span>
-<span class="line" id="L1594">                r.max_byte = <span class="tok-builtin">@intCast</span>(<span class="tok-type">u8</span>, s.len - <span class="tok-number">1</span>);</span>
-<span class="line" id="L1595">                <span class="tok-kw">return</span> r.*;</span>
-<span class="line" id="L1596">            }</span>
-<span class="line" id="L1597">        };</span>
-<span class="line" id="L1598">        <span class="tok-kw">const</span> print = S.print;</span>
-<span class="line" id="L1599">        <span class="tok-kw">const</span> copy = S.copy;</span>
-<span class="line" id="L1600"></span>
-<span class="line" id="L1601">        <span class="tok-kw">if</span> (self.abi == .android) {</span>
-<span class="line" id="L1602">            <span class="tok-kw">const</span> suffix = <span class="tok-kw">if</span> (self.cpu.arch.ptrBitWidth() == <span class="tok-number">64</span>) <span class="tok-str">&quot;64&quot;</span> <span class="tok-kw">else</span> <span class="tok-str">&quot;&quot;</span>;</span>
-<span class="line" id="L1603">            <span class="tok-kw">return</span> print(&amp;result, <span class="tok-str">&quot;/system/bin/linker{s}&quot;</span>, .{suffix});</span>
-<span class="line" id="L1604">        }</span>
-<span class="line" id="L1605"></span>
-<span class="line" id="L1606">        <span class="tok-kw">if</span> (self.abi.isMusl()) {</span>
-<span class="line" id="L1607">            <span class="tok-kw">const</span> is_arm = <span class="tok-kw">switch</span> (self.cpu.arch) {</span>
-<span class="line" id="L1608">                .arm, .armeb, .thumb, .thumbeb =&gt; <span class="tok-null">true</span>,</span>
-<span class="line" id="L1609">                <span class="tok-kw">else</span> =&gt; <span class="tok-null">false</span>,</span>
-<span class="line" id="L1610">            };</span>
-<span class="line" id="L1611">            <span class="tok-kw">const</span> arch_part = <span class="tok-kw">switch</span> (self.cpu.arch) {</span>
-<span class="line" id="L1612">                .arm, .thumb =&gt; <span class="tok-str">&quot;arm&quot;</span>,</span>
-<span class="line" id="L1613">                .armeb, .thumbeb =&gt; <span class="tok-str">&quot;armeb&quot;</span>,</span>
-<span class="line" id="L1614">                <span class="tok-kw">else</span> =&gt; |arch| <span class="tok-builtin">@tagName</span>(arch),</span>
-<span class="line" id="L1615">            };</span>
-<span class="line" id="L1616">            <span class="tok-kw">const</span> arch_suffix = <span class="tok-kw">if</span> (is_arm <span class="tok-kw">and</span> self.abi.floatAbi() == .hard) <span class="tok-str">&quot;hf&quot;</span> <span class="tok-kw">else</span> <span class="tok-str">&quot;&quot;</span>;</span>
-<span class="line" id="L1617">            <span class="tok-kw">return</span> print(&amp;result, <span class="tok-str">&quot;/lib/ld-musl-{s}{s}.so.1&quot;</span>, .{ arch_part, arch_suffix });</span>
-<span class="line" id="L1618">        }</span>
-<span class="line" id="L1619"></span>
-<span class="line" id="L1620">        <span class="tok-kw">switch</span> (self.os.tag) {</span>
-<span class="line" id="L1621">            .freebsd =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/libexec/ld-elf.so.1&quot;</span>),</span>
-<span class="line" id="L1622">            .netbsd =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/libexec/ld.elf_so&quot;</span>),</span>
-<span class="line" id="L1623">            .openbsd =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/usr/libexec/ld.so&quot;</span>),</span>
-<span class="line" id="L1624">            .dragonfly =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/libexec/ld-elf.so.2&quot;</span>),</span>
-<span class="line" id="L1625">            .solaris =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib/64/ld.so.1&quot;</span>),</span>
-<span class="line" id="L1626">            .linux =&gt; <span class="tok-kw">switch</span> (self.cpu.arch) {</span>
-<span class="line" id="L1627">                .x86,</span>
-<span class="line" id="L1628">                .sparc,</span>
-<span class="line" id="L1629">                .sparcel,</span>
-<span class="line" id="L1630">                =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib/ld-linux.so.2&quot;</span>),</span>
-<span class="line" id="L1631"></span>
-<span class="line" id="L1632">                .aarch64 =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib/ld-linux-aarch64.so.1&quot;</span>),</span>
-<span class="line" id="L1633">                .aarch64_be =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib/ld-linux-aarch64_be.so.1&quot;</span>),</span>
-<span class="line" id="L1634">                .aarch64_32 =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib/ld-linux-aarch64_32.so.1&quot;</span>),</span>
+<span class="line" id="L1561">        <span class="tok-comment">/// Used to construct the dynamic linker path. This field should not be used</span></span>
+<span class="line" id="L1562">        <span class="tok-comment">/// directly. See `get` and `set`.</span></span>
+<span class="line" id="L1563">        max_byte: ?<span class="tok-type">u8</span> = <span class="tok-null">null</span>,</span>
+<span class="line" id="L1564"></span>
+<span class="line" id="L1565">        <span class="tok-comment">/// Asserts that the length is less than or equal to 255 bytes.</span></span>
+<span class="line" id="L1566">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">init</span>(dl_or_null: ?[]<span class="tok-kw">const</span> <span class="tok-type">u8</span>) DynamicLinker {</span>
+<span class="line" id="L1567">            <span class="tok-kw">var</span> result: DynamicLinker = <span class="tok-null">undefined</span>;</span>
+<span class="line" id="L1568">            result.set(dl_or_null);</span>
+<span class="line" id="L1569">            <span class="tok-kw">return</span> result;</span>
+<span class="line" id="L1570">        }</span>
+<span class="line" id="L1571"></span>
+<span class="line" id="L1572">        <span class="tok-comment">/// The returned memory has the same lifetime as the `DynamicLinker`.</span></span>
+<span class="line" id="L1573">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">get</span>(self: *<span class="tok-kw">const</span> DynamicLinker) ?[]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
+<span class="line" id="L1574">            <span class="tok-kw">const</span> m: <span class="tok-type">usize</span> = self.max_byte <span class="tok-kw">orelse</span> <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
+<span class="line" id="L1575">            <span class="tok-kw">return</span> self.buffer[<span class="tok-number">0</span> .. m + <span class="tok-number">1</span>];</span>
+<span class="line" id="L1576">        }</span>
+<span class="line" id="L1577"></span>
+<span class="line" id="L1578">        <span class="tok-comment">/// Asserts that the length is less than or equal to 255 bytes.</span></span>
+<span class="line" id="L1579">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">set</span>(self: *DynamicLinker, dl_or_null: ?[]<span class="tok-kw">const</span> <span class="tok-type">u8</span>) <span class="tok-type">void</span> {</span>
+<span class="line" id="L1580">            <span class="tok-kw">if</span> (dl_or_null) |dl| {</span>
+<span class="line" id="L1581">                mem.copy(<span class="tok-type">u8</span>, &amp;self.buffer, dl);</span>
+<span class="line" id="L1582">                self.max_byte = <span class="tok-builtin">@intCast</span>(<span class="tok-type">u8</span>, dl.len - <span class="tok-number">1</span>);</span>
+<span class="line" id="L1583">            } <span class="tok-kw">else</span> {</span>
+<span class="line" id="L1584">                self.max_byte = <span class="tok-null">null</span>;</span>
+<span class="line" id="L1585">            }</span>
+<span class="line" id="L1586">        }</span>
+<span class="line" id="L1587">    };</span>
+<span class="line" id="L1588"></span>
+<span class="line" id="L1589">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">standardDynamicLinkerPath</span>(self: Target) DynamicLinker {</span>
+<span class="line" id="L1590">        <span class="tok-kw">var</span> result: DynamicLinker = .{};</span>
+<span class="line" id="L1591">        <span class="tok-kw">const</span> S = <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L1592">            <span class="tok-kw">fn</span> <span class="tok-fn">print</span>(r: *DynamicLinker, <span class="tok-kw">comptime</span> fmt: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>, args: <span class="tok-kw">anytype</span>) DynamicLinker {</span>
+<span class="line" id="L1593">                r.max_byte = <span class="tok-builtin">@intCast</span>(<span class="tok-type">u8</span>, (std.fmt.bufPrint(&amp;r.buffer, fmt, args) <span class="tok-kw">catch</span> <span class="tok-kw">unreachable</span>).len - <span class="tok-number">1</span>);</span>
+<span class="line" id="L1594">                <span class="tok-kw">return</span> r.*;</span>
+<span class="line" id="L1595">            }</span>
+<span class="line" id="L1596">            <span class="tok-kw">fn</span> <span class="tok-fn">copy</span>(r: *DynamicLinker, s: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>) DynamicLinker {</span>
+<span class="line" id="L1597">                mem.copy(<span class="tok-type">u8</span>, &amp;r.buffer, s);</span>
+<span class="line" id="L1598">                r.max_byte = <span class="tok-builtin">@intCast</span>(<span class="tok-type">u8</span>, s.len - <span class="tok-number">1</span>);</span>
+<span class="line" id="L1599">                <span class="tok-kw">return</span> r.*;</span>
+<span class="line" id="L1600">            }</span>
+<span class="line" id="L1601">        };</span>
+<span class="line" id="L1602">        <span class="tok-kw">const</span> print = S.print;</span>
+<span class="line" id="L1603">        <span class="tok-kw">const</span> copy = S.copy;</span>
+<span class="line" id="L1604"></span>
+<span class="line" id="L1605">        <span class="tok-kw">if</span> (self.abi == .android) {</span>
+<span class="line" id="L1606">            <span class="tok-kw">const</span> suffix = <span class="tok-kw">if</span> (self.cpu.arch.ptrBitWidth() == <span class="tok-number">64</span>) <span class="tok-str">&quot;64&quot;</span> <span class="tok-kw">else</span> <span class="tok-str">&quot;&quot;</span>;</span>
+<span class="line" id="L1607">            <span class="tok-kw">return</span> print(&amp;result, <span class="tok-str">&quot;/system/bin/linker{s}&quot;</span>, .{suffix});</span>
+<span class="line" id="L1608">        }</span>
+<span class="line" id="L1609"></span>
+<span class="line" id="L1610">        <span class="tok-kw">if</span> (self.abi.isMusl()) {</span>
+<span class="line" id="L1611">            <span class="tok-kw">const</span> is_arm = <span class="tok-kw">switch</span> (self.cpu.arch) {</span>
+<span class="line" id="L1612">                .arm, .armeb, .thumb, .thumbeb =&gt; <span class="tok-null">true</span>,</span>
+<span class="line" id="L1613">                <span class="tok-kw">else</span> =&gt; <span class="tok-null">false</span>,</span>
+<span class="line" id="L1614">            };</span>
+<span class="line" id="L1615">            <span class="tok-kw">const</span> arch_part = <span class="tok-kw">switch</span> (self.cpu.arch) {</span>
+<span class="line" id="L1616">                .arm, .thumb =&gt; <span class="tok-str">&quot;arm&quot;</span>,</span>
+<span class="line" id="L1617">                .armeb, .thumbeb =&gt; <span class="tok-str">&quot;armeb&quot;</span>,</span>
+<span class="line" id="L1618">                <span class="tok-kw">else</span> =&gt; |arch| <span class="tok-builtin">@tagName</span>(arch),</span>
+<span class="line" id="L1619">            };</span>
+<span class="line" id="L1620">            <span class="tok-kw">const</span> arch_suffix = <span class="tok-kw">if</span> (is_arm <span class="tok-kw">and</span> self.abi.floatAbi() == .hard) <span class="tok-str">&quot;hf&quot;</span> <span class="tok-kw">else</span> <span class="tok-str">&quot;&quot;</span>;</span>
+<span class="line" id="L1621">            <span class="tok-kw">return</span> print(&amp;result, <span class="tok-str">&quot;/lib/ld-musl-{s}{s}.so.1&quot;</span>, .{ arch_part, arch_suffix });</span>
+<span class="line" id="L1622">        }</span>
+<span class="line" id="L1623"></span>
+<span class="line" id="L1624">        <span class="tok-kw">switch</span> (self.os.tag) {</span>
+<span class="line" id="L1625">            .freebsd =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/libexec/ld-elf.so.1&quot;</span>),</span>
+<span class="line" id="L1626">            .netbsd =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/libexec/ld.elf_so&quot;</span>),</span>
+<span class="line" id="L1627">            .openbsd =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/usr/libexec/ld.so&quot;</span>),</span>
+<span class="line" id="L1628">            .dragonfly =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/libexec/ld-elf.so.2&quot;</span>),</span>
+<span class="line" id="L1629">            .solaris =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib/64/ld.so.1&quot;</span>),</span>
+<span class="line" id="L1630">            .linux =&gt; <span class="tok-kw">switch</span> (self.cpu.arch) {</span>
+<span class="line" id="L1631">                .x86,</span>
+<span class="line" id="L1632">                .sparc,</span>
+<span class="line" id="L1633">                .sparcel,</span>
+<span class="line" id="L1634">                =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib/ld-linux.so.2&quot;</span>),</span>
 <span class="line" id="L1635"></span>
-<span class="line" id="L1636">                .arm,</span>
-<span class="line" id="L1637">                .armeb,</span>
-<span class="line" id="L1638">                .thumb,</span>
-<span class="line" id="L1639">                .thumbeb,</span>
-<span class="line" id="L1640">                =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-kw">switch</span> (self.abi.floatAbi()) {</span>
-<span class="line" id="L1641">                    .hard =&gt; <span class="tok-str">&quot;/lib/ld-linux-armhf.so.3&quot;</span>,</span>
-<span class="line" id="L1642">                    <span class="tok-kw">else</span> =&gt; <span class="tok-str">&quot;/lib/ld-linux.so.3&quot;</span>,</span>
-<span class="line" id="L1643">                }),</span>
-<span class="line" id="L1644"></span>
-<span class="line" id="L1645">                .mips,</span>
-<span class="line" id="L1646">                .mipsel,</span>
-<span class="line" id="L1647">                .mips64,</span>
-<span class="line" id="L1648">                .mips64el,</span>
-<span class="line" id="L1649">                =&gt; {</span>
-<span class="line" id="L1650">                    <span class="tok-kw">const</span> lib_suffix = <span class="tok-kw">switch</span> (self.abi) {</span>
-<span class="line" id="L1651">                        .gnuabin32, .gnux32 =&gt; <span class="tok-str">&quot;32&quot;</span>,</span>
-<span class="line" id="L1652">                        .gnuabi64 =&gt; <span class="tok-str">&quot;64&quot;</span>,</span>
-<span class="line" id="L1653">                        <span class="tok-kw">else</span> =&gt; <span class="tok-str">&quot;&quot;</span>,</span>
-<span class="line" id="L1654">                    };</span>
-<span class="line" id="L1655">                    <span class="tok-kw">const</span> is_nan_2008 = mips.featureSetHas(self.cpu.features, .nan2008);</span>
-<span class="line" id="L1656">                    <span class="tok-kw">const</span> loader = <span class="tok-kw">if</span> (is_nan_2008) <span class="tok-str">&quot;ld-linux-mipsn8.so.1&quot;</span> <span class="tok-kw">else</span> <span class="tok-str">&quot;ld.so.1&quot;</span>;</span>
-<span class="line" id="L1657">                    <span class="tok-kw">return</span> print(&amp;result, <span class="tok-str">&quot;/lib{s}/{s}&quot;</span>, .{ lib_suffix, loader });</span>
-<span class="line" id="L1658">                },</span>
-<span class="line" id="L1659"></span>
-<span class="line" id="L1660">                .powerpc, .powerpcle =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib/ld.so.1&quot;</span>),</span>
-<span class="line" id="L1661">                .powerpc64, .powerpc64le =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib64/ld64.so.2&quot;</span>),</span>
-<span class="line" id="L1662">                .s390x =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib64/ld64.so.1&quot;</span>),</span>
-<span class="line" id="L1663">                .sparc64 =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib64/ld-linux.so.2&quot;</span>),</span>
-<span class="line" id="L1664">                .x86_64 =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-kw">switch</span> (self.abi) {</span>
-<span class="line" id="L1665">                    .gnux32 =&gt; <span class="tok-str">&quot;/libx32/ld-linux-x32.so.2&quot;</span>,</span>
-<span class="line" id="L1666">                    <span class="tok-kw">else</span> =&gt; <span class="tok-str">&quot;/lib64/ld-linux-x86-64.so.2&quot;</span>,</span>
-<span class="line" id="L1667">                }),</span>
-<span class="line" id="L1668"></span>
-<span class="line" id="L1669">                .riscv32 =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib/ld-linux-riscv32-ilp32.so.1&quot;</span>),</span>
-<span class="line" id="L1670">                .riscv64 =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib/ld-linux-riscv64-lp64.so.1&quot;</span>),</span>
-<span class="line" id="L1671"></span>
-<span class="line" id="L1672">                <span class="tok-comment">// Architectures in this list have been verified as not having a standard</span>
+<span class="line" id="L1636">                .aarch64 =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib/ld-linux-aarch64.so.1&quot;</span>),</span>
+<span class="line" id="L1637">                .aarch64_be =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib/ld-linux-aarch64_be.so.1&quot;</span>),</span>
+<span class="line" id="L1638">                .aarch64_32 =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib/ld-linux-aarch64_32.so.1&quot;</span>),</span>
+<span class="line" id="L1639"></span>
+<span class="line" id="L1640">                .arm,</span>
+<span class="line" id="L1641">                .armeb,</span>
+<span class="line" id="L1642">                .thumb,</span>
+<span class="line" id="L1643">                .thumbeb,</span>
+<span class="line" id="L1644">                =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-kw">switch</span> (self.abi.floatAbi()) {</span>
+<span class="line" id="L1645">                    .hard =&gt; <span class="tok-str">&quot;/lib/ld-linux-armhf.so.3&quot;</span>,</span>
+<span class="line" id="L1646">                    <span class="tok-kw">else</span> =&gt; <span class="tok-str">&quot;/lib/ld-linux.so.3&quot;</span>,</span>
+<span class="line" id="L1647">                }),</span>
+<span class="line" id="L1648"></span>
+<span class="line" id="L1649">                .mips,</span>
+<span class="line" id="L1650">                .mipsel,</span>
+<span class="line" id="L1651">                .mips64,</span>
+<span class="line" id="L1652">                .mips64el,</span>
+<span class="line" id="L1653">                =&gt; {</span>
+<span class="line" id="L1654">                    <span class="tok-kw">const</span> lib_suffix = <span class="tok-kw">switch</span> (self.abi) {</span>
+<span class="line" id="L1655">                        .gnuabin32, .gnux32 =&gt; <span class="tok-str">&quot;32&quot;</span>,</span>
+<span class="line" id="L1656">                        .gnuabi64 =&gt; <span class="tok-str">&quot;64&quot;</span>,</span>
+<span class="line" id="L1657">                        <span class="tok-kw">else</span> =&gt; <span class="tok-str">&quot;&quot;</span>,</span>
+<span class="line" id="L1658">                    };</span>
+<span class="line" id="L1659">                    <span class="tok-kw">const</span> is_nan_2008 = mips.featureSetHas(self.cpu.features, .nan2008);</span>
+<span class="line" id="L1660">                    <span class="tok-kw">const</span> loader = <span class="tok-kw">if</span> (is_nan_2008) <span class="tok-str">&quot;ld-linux-mipsn8.so.1&quot;</span> <span class="tok-kw">else</span> <span class="tok-str">&quot;ld.so.1&quot;</span>;</span>
+<span class="line" id="L1661">                    <span class="tok-kw">return</span> print(&amp;result, <span class="tok-str">&quot;/lib{s}/{s}&quot;</span>, .{ lib_suffix, loader });</span>
+<span class="line" id="L1662">                },</span>
+<span class="line" id="L1663"></span>
+<span class="line" id="L1664">                .powerpc, .powerpcle =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib/ld.so.1&quot;</span>),</span>
+<span class="line" id="L1665">                .powerpc64, .powerpc64le =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib64/ld64.so.2&quot;</span>),</span>
+<span class="line" id="L1666">                .s390x =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib64/ld64.so.1&quot;</span>),</span>
+<span class="line" id="L1667">                .sparc64 =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib64/ld-linux.so.2&quot;</span>),</span>
+<span class="line" id="L1668">                .x86_64 =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-kw">switch</span> (self.abi) {</span>
+<span class="line" id="L1669">                    .gnux32 =&gt; <span class="tok-str">&quot;/libx32/ld-linux-x32.so.2&quot;</span>,</span>
+<span class="line" id="L1670">                    <span class="tok-kw">else</span> =&gt; <span class="tok-str">&quot;/lib64/ld-linux-x86-64.so.2&quot;</span>,</span>
+<span class="line" id="L1671">                }),</span>
+<span class="line" id="L1672"></span>
+<span class="line" id="L1673">                .riscv32 =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib/ld-linux-riscv32-ilp32.so.1&quot;</span>),</span>
+<span class="line" id="L1674">                .riscv64 =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/lib/ld-linux-riscv64-lp64.so.1&quot;</span>),</span>
+<span class="line" id="L1675"></span>
+<span class="line" id="L1676">                <span class="tok-comment">// Architectures in this list have been verified as not having a standard</span>
 </span>
-<span class="line" id="L1673">                <span class="tok-comment">// dynamic linker path.</span>
+<span class="line" id="L1677">                <span class="tok-comment">// dynamic linker path.</span>
 </span>
-<span class="line" id="L1674">                .wasm32,</span>
-<span class="line" id="L1675">                .wasm64,</span>
-<span class="line" id="L1676">                .bpfel,</span>
-<span class="line" id="L1677">                .bpfeb,</span>
-<span class="line" id="L1678">                .nvptx,</span>
-<span class="line" id="L1679">                .nvptx64,</span>
-<span class="line" id="L1680">                .spu_2,</span>
-<span class="line" id="L1681">                .avr,</span>
-<span class="line" id="L1682">                .spirv32,</span>
-<span class="line" id="L1683">                .spirv64,</span>
-<span class="line" id="L1684">                =&gt; <span class="tok-kw">return</span> result,</span>
-<span class="line" id="L1685"></span>
-<span class="line" id="L1686">                <span class="tok-comment">// TODO go over each item in this list and either move it to the above list, or</span>
+<span class="line" id="L1678">                .wasm32,</span>
+<span class="line" id="L1679">                .wasm64,</span>
+<span class="line" id="L1680">                .bpfel,</span>
+<span class="line" id="L1681">                .bpfeb,</span>
+<span class="line" id="L1682">                .nvptx,</span>
+<span class="line" id="L1683">                .nvptx64,</span>
+<span class="line" id="L1684">                .spu_2,</span>
+<span class="line" id="L1685">                .avr,</span>
+<span class="line" id="L1686">                .spirv32,</span>
+<span class="line" id="L1687">                .spirv64,</span>
+<span class="line" id="L1688">                =&gt; <span class="tok-kw">return</span> result,</span>
+<span class="line" id="L1689"></span>
+<span class="line" id="L1690">                <span class="tok-comment">// TODO go over each item in this list and either move it to the above list, or</span>
 </span>
-<span class="line" id="L1687">                <span class="tok-comment">// implement the standard dynamic linker path code for it.</span>
+<span class="line" id="L1691">                <span class="tok-comment">// implement the standard dynamic linker path code for it.</span>
 </span>
-<span class="line" id="L1688">                .arc,</span>
-<span class="line" id="L1689">                .csky,</span>
-<span class="line" id="L1690">                .hexagon,</span>
-<span class="line" id="L1691">                .m68k,</span>
-<span class="line" id="L1692">                .msp430,</span>
-<span class="line" id="L1693">                .r600,</span>
-<span class="line" id="L1694">                .amdgcn,</span>
-<span class="line" id="L1695">                .tce,</span>
-<span class="line" id="L1696">                .tcele,</span>
-<span class="line" id="L1697">                .xcore,</span>
-<span class="line" id="L1698">                .le32,</span>
-<span class="line" id="L1699">                .le64,</span>
-<span class="line" id="L1700">                .amdil,</span>
-<span class="line" id="L1701">                .amdil64,</span>
-<span class="line" id="L1702">                .hsail,</span>
-<span class="line" id="L1703">                .hsail64,</span>
-<span class="line" id="L1704">                .spir,</span>
-<span class="line" id="L1705">                .spir64,</span>
-<span class="line" id="L1706">                .kalimba,</span>
-<span class="line" id="L1707">                .shave,</span>
-<span class="line" id="L1708">                .lanai,</span>
-<span class="line" id="L1709">                .renderscript32,</span>
-<span class="line" id="L1710">                .renderscript64,</span>
-<span class="line" id="L1711">                .ve,</span>
-<span class="line" id="L1712">                .dxil,</span>
-<span class="line" id="L1713">                .loongarch32,</span>
-<span class="line" id="L1714">                .loongarch64,</span>
-<span class="line" id="L1715">                =&gt; <span class="tok-kw">return</span> result,</span>
-<span class="line" id="L1716">            },</span>
-<span class="line" id="L1717"></span>
-<span class="line" id="L1718">            .ios,</span>
-<span class="line" id="L1719">            .tvos,</span>
-<span class="line" id="L1720">            .watchos,</span>
-<span class="line" id="L1721">            .macos,</span>
-<span class="line" id="L1722">            =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/usr/lib/dyld&quot;</span>),</span>
-<span class="line" id="L1723"></span>
-<span class="line" id="L1724">            <span class="tok-comment">// Operating systems in this list have been verified as not having a standard</span>
+<span class="line" id="L1692">                .arc,</span>
+<span class="line" id="L1693">                .csky,</span>
+<span class="line" id="L1694">                .hexagon,</span>
+<span class="line" id="L1695">                .m68k,</span>
+<span class="line" id="L1696">                .msp430,</span>
+<span class="line" id="L1697">                .r600,</span>
+<span class="line" id="L1698">                .amdgcn,</span>
+<span class="line" id="L1699">                .tce,</span>
+<span class="line" id="L1700">                .tcele,</span>
+<span class="line" id="L1701">                .xcore,</span>
+<span class="line" id="L1702">                .le32,</span>
+<span class="line" id="L1703">                .le64,</span>
+<span class="line" id="L1704">                .amdil,</span>
+<span class="line" id="L1705">                .amdil64,</span>
+<span class="line" id="L1706">                .hsail,</span>
+<span class="line" id="L1707">                .hsail64,</span>
+<span class="line" id="L1708">                .spir,</span>
+<span class="line" id="L1709">                .spir64,</span>
+<span class="line" id="L1710">                .kalimba,</span>
+<span class="line" id="L1711">                .shave,</span>
+<span class="line" id="L1712">                .lanai,</span>
+<span class="line" id="L1713">                .renderscript32,</span>
+<span class="line" id="L1714">                .renderscript64,</span>
+<span class="line" id="L1715">                .ve,</span>
+<span class="line" id="L1716">                .dxil,</span>
+<span class="line" id="L1717">                .loongarch32,</span>
+<span class="line" id="L1718">                .loongarch64,</span>
+<span class="line" id="L1719">                =&gt; <span class="tok-kw">return</span> result,</span>
+<span class="line" id="L1720">            },</span>
+<span class="line" id="L1721"></span>
+<span class="line" id="L1722">            .ios,</span>
+<span class="line" id="L1723">            .tvos,</span>
+<span class="line" id="L1724">            .watchos,</span>
+<span class="line" id="L1725">            .macos,</span>
+<span class="line" id="L1726">            =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/usr/lib/dyld&quot;</span>),</span>
+<span class="line" id="L1727"></span>
+<span class="line" id="L1728">            <span class="tok-comment">// Operating systems in this list have been verified as not having a standard</span>
 </span>
-<span class="line" id="L1725">            <span class="tok-comment">// dynamic linker path.</span>
+<span class="line" id="L1729">            <span class="tok-comment">// dynamic linker path.</span>
 </span>
-<span class="line" id="L1726">            .freestanding,</span>
-<span class="line" id="L1727">            .uefi,</span>
-<span class="line" id="L1728">            .windows,</span>
-<span class="line" id="L1729">            .emscripten,</span>
-<span class="line" id="L1730">            .wasi,</span>
-<span class="line" id="L1731">            .opencl,</span>
-<span class="line" id="L1732">            .glsl450,</span>
-<span class="line" id="L1733">            .vulkan,</span>
-<span class="line" id="L1734">            .other,</span>
-<span class="line" id="L1735">            .plan9,</span>
-<span class="line" id="L1736">            =&gt; <span class="tok-kw">return</span> result,</span>
-<span class="line" id="L1737"></span>
-<span class="line" id="L1738">            <span class="tok-comment">// TODO revisit when multi-arch for Haiku is available</span>
+<span class="line" id="L1730">            .freestanding,</span>
+<span class="line" id="L1731">            .uefi,</span>
+<span class="line" id="L1732">            .windows,</span>
+<span class="line" id="L1733">            .emscripten,</span>
+<span class="line" id="L1734">            .wasi,</span>
+<span class="line" id="L1735">            .opencl,</span>
+<span class="line" id="L1736">            .glsl450,</span>
+<span class="line" id="L1737">            .vulkan,</span>
+<span class="line" id="L1738">            .other,</span>
+<span class="line" id="L1739">            .plan9,</span>
+<span class="line" id="L1740">            =&gt; <span class="tok-kw">return</span> result,</span>
+<span class="line" id="L1741"></span>
+<span class="line" id="L1742">            <span class="tok-comment">// TODO revisit when multi-arch for Haiku is available</span>
 </span>
-<span class="line" id="L1739">            .haiku =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/system/runtime_loader&quot;</span>),</span>
-<span class="line" id="L1740"></span>
-<span class="line" id="L1741">            <span class="tok-comment">// TODO go over each item in this list and either move it to the above list, or</span>
+<span class="line" id="L1743">            .haiku =&gt; <span class="tok-kw">return</span> copy(&amp;result, <span class="tok-str">&quot;/system/runtime_loader&quot;</span>),</span>
+<span class="line" id="L1744"></span>
+<span class="line" id="L1745">            <span class="tok-comment">// TODO go over each item in this list and either move it to the above list, or</span>
 </span>
-<span class="line" id="L1742">            <span class="tok-comment">// implement the standard dynamic linker path code for it.</span>
+<span class="line" id="L1746">            <span class="tok-comment">// implement the standard dynamic linker path code for it.</span>
 </span>
-<span class="line" id="L1743">            .ananas,</span>
-<span class="line" id="L1744">            .cloudabi,</span>
-<span class="line" id="L1745">            .fuchsia,</span>
-<span class="line" id="L1746">            .kfreebsd,</span>
-<span class="line" id="L1747">            .lv2,</span>
-<span class="line" id="L1748">            .zos,</span>
-<span class="line" id="L1749">            .minix,</span>
-<span class="line" id="L1750">            .rtems,</span>
-<span class="line" id="L1751">            .nacl,</span>
-<span class="line" id="L1752">            .aix,</span>
-<span class="line" id="L1753">            .cuda,</span>
-<span class="line" id="L1754">            .nvcl,</span>
-<span class="line" id="L1755">            .amdhsa,</span>
-<span class="line" id="L1756">            .ps4,</span>
-<span class="line" id="L1757">            .ps5,</span>
-<span class="line" id="L1758">            .elfiamcu,</span>
-<span class="line" id="L1759">            .mesa3d,</span>
-<span class="line" id="L1760">            .contiki,</span>
-<span class="line" id="L1761">            .amdpal,</span>
-<span class="line" id="L1762">            .hermit,</span>
-<span class="line" id="L1763">            .hurd,</span>
-<span class="line" id="L1764">            .driverkit,</span>
-<span class="line" id="L1765">            .shadermodel,</span>
-<span class="line" id="L1766">            =&gt; <span class="tok-kw">return</span> result,</span>
-<span class="line" id="L1767">        }</span>
-<span class="line" id="L1768">    }</span>
-<span class="line" id="L1769"></span>
-<span class="line" id="L1770">    <span class="tok-comment">/// 0c spim    little-endian MIPS 3000 family</span></span>
-<span class="line" id="L1771">    <span class="tok-comment">/// 1c 68000   Motorola MC68000</span></span>
-<span class="line" id="L1772">    <span class="tok-comment">/// 2c 68020   Motorola MC68020</span></span>
-<span class="line" id="L1773">    <span class="tok-comment">/// 5c arm     little-endian ARM</span></span>
-<span class="line" id="L1774">    <span class="tok-comment">/// 6c amd64   AMD64 and compatibles (e.g., Intel EM64T)</span></span>
-<span class="line" id="L1775">    <span class="tok-comment">/// 7c arm64   ARM64 (ARMv8)</span></span>
-<span class="line" id="L1776">    <span class="tok-comment">/// 8c 386     Intel x86, i486, Pentium, etc.</span></span>
-<span class="line" id="L1777">    <span class="tok-comment">/// kc sparc   Sun SPARC</span></span>
-<span class="line" id="L1778">    <span class="tok-comment">/// qc power   Power PC</span></span>
-<span class="line" id="L1779">    <span class="tok-comment">/// vc mips    big-endian MIPS 3000 family</span></span>
-<span class="line" id="L1780">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">plan9Ext</span>(cpu_arch: Cpu.Arch) [:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
-<span class="line" id="L1781">        <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (cpu_arch) {</span>
-<span class="line" id="L1782">            .arm =&gt; <span class="tok-str">&quot;.5&quot;</span>,</span>
-<span class="line" id="L1783">            .x86_64 =&gt; <span class="tok-str">&quot;.6&quot;</span>,</span>
-<span class="line" id="L1784">            .aarch64 =&gt; <span class="tok-str">&quot;.7&quot;</span>,</span>
-<span class="line" id="L1785">            .x86 =&gt; <span class="tok-str">&quot;.8&quot;</span>,</span>
-<span class="line" id="L1786">            .sparc =&gt; <span class="tok-str">&quot;.k&quot;</span>,</span>
-<span class="line" id="L1787">            .powerpc, .powerpcle =&gt; <span class="tok-str">&quot;.q&quot;</span>,</span>
-<span class="line" id="L1788">            .mips, .mipsel =&gt; <span class="tok-str">&quot;.v&quot;</span>,</span>
-<span class="line" id="L1789">            <span class="tok-comment">// ISAs without designated characters get 'X' for lack of a better option.</span>
+<span class="line" id="L1747">            .ananas,</span>
+<span class="line" id="L1748">            .cloudabi,</span>
+<span class="line" id="L1749">            .fuchsia,</span>
+<span class="line" id="L1750">            .kfreebsd,</span>
+<span class="line" id="L1751">            .lv2,</span>
+<span class="line" id="L1752">            .zos,</span>
+<span class="line" id="L1753">            .minix,</span>
+<span class="line" id="L1754">            .rtems,</span>
+<span class="line" id="L1755">            .nacl,</span>
+<span class="line" id="L1756">            .aix,</span>
+<span class="line" id="L1757">            .cuda,</span>
+<span class="line" id="L1758">            .nvcl,</span>
+<span class="line" id="L1759">            .amdhsa,</span>
+<span class="line" id="L1760">            .ps4,</span>
+<span class="line" id="L1761">            .ps5,</span>
+<span class="line" id="L1762">            .elfiamcu,</span>
+<span class="line" id="L1763">            .mesa3d,</span>
+<span class="line" id="L1764">            .contiki,</span>
+<span class="line" id="L1765">            .amdpal,</span>
+<span class="line" id="L1766">            .hermit,</span>
+<span class="line" id="L1767">            .hurd,</span>
+<span class="line" id="L1768">            .driverkit,</span>
+<span class="line" id="L1769">            .shadermodel,</span>
+<span class="line" id="L1770">            =&gt; <span class="tok-kw">return</span> result,</span>
+<span class="line" id="L1771">        }</span>
+<span class="line" id="L1772">    }</span>
+<span class="line" id="L1773"></span>
+<span class="line" id="L1774">    <span class="tok-comment">/// 0c spim    little-endian MIPS 3000 family</span></span>
+<span class="line" id="L1775">    <span class="tok-comment">/// 1c 68000   Motorola MC68000</span></span>
+<span class="line" id="L1776">    <span class="tok-comment">/// 2c 68020   Motorola MC68020</span></span>
+<span class="line" id="L1777">    <span class="tok-comment">/// 5c arm     little-endian ARM</span></span>
+<span class="line" id="L1778">    <span class="tok-comment">/// 6c amd64   AMD64 and compatibles (e.g., Intel EM64T)</span></span>
+<span class="line" id="L1779">    <span class="tok-comment">/// 7c arm64   ARM64 (ARMv8)</span></span>
+<span class="line" id="L1780">    <span class="tok-comment">/// 8c 386     Intel x86, i486, Pentium, etc.</span></span>
+<span class="line" id="L1781">    <span class="tok-comment">/// kc sparc   Sun SPARC</span></span>
+<span class="line" id="L1782">    <span class="tok-comment">/// qc power   Power PC</span></span>
+<span class="line" id="L1783">    <span class="tok-comment">/// vc mips    big-endian MIPS 3000 family</span></span>
+<span class="line" id="L1784">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">plan9Ext</span>(cpu_arch: Cpu.Arch) [:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
+<span class="line" id="L1785">        <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (cpu_arch) {</span>
+<span class="line" id="L1786">            .arm =&gt; <span class="tok-str">&quot;.5&quot;</span>,</span>
+<span class="line" id="L1787">            .x86_64 =&gt; <span class="tok-str">&quot;.6&quot;</span>,</span>
+<span class="line" id="L1788">            .aarch64 =&gt; <span class="tok-str">&quot;.7&quot;</span>,</span>
+<span class="line" id="L1789">            .x86 =&gt; <span class="tok-str">&quot;.8&quot;</span>,</span>
+<span class="line" id="L1790">            .sparc =&gt; <span class="tok-str">&quot;.k&quot;</span>,</span>
+<span class="line" id="L1791">            .powerpc, .powerpcle =&gt; <span class="tok-str">&quot;.q&quot;</span>,</span>
+<span class="line" id="L1792">            .mips, .mipsel =&gt; <span class="tok-str">&quot;.v&quot;</span>,</span>
+<span class="line" id="L1793">            <span class="tok-comment">// ISAs without designated characters get 'X' for lack of a better option.</span>
 </span>
-<span class="line" id="L1790">            <span class="tok-kw">else</span> =&gt; <span class="tok-str">&quot;.X&quot;</span>,</span>
-<span class="line" id="L1791">        };</span>
-<span class="line" id="L1792">    }</span>
-<span class="line" id="L1793"></span>
-<span class="line" id="L1794">    <span class="tok-kw">pub</span> <span class="tok-kw">inline</span> <span class="tok-kw">fn</span> <span class="tok-fn">maxIntAlignment</span>(target: Target) <span class="tok-type">u16</span> {</span>
-<span class="line" id="L1795">        <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (target.cpu.arch) {</span>
-<span class="line" id="L1796">            .avr =&gt; <span class="tok-number">1</span>,</span>
-<span class="line" id="L1797">            .msp430 =&gt; <span class="tok-number">2</span>,</span>
-<span class="line" id="L1798">            .xcore =&gt; <span class="tok-number">4</span>,</span>
-<span class="line" id="L1799"></span>
-<span class="line" id="L1800">            .arm,</span>
-<span class="line" id="L1801">            .armeb,</span>
-<span class="line" id="L1802">            .thumb,</span>
-<span class="line" id="L1803">            .thumbeb,</span>
-<span class="line" id="L1804">            .hexagon,</span>
-<span class="line" id="L1805">            .mips,</span>
-<span class="line" id="L1806">            .mipsel,</span>
-<span class="line" id="L1807">            .powerpc,</span>
-<span class="line" id="L1808">            .powerpcle,</span>
-<span class="line" id="L1809">            .r600,</span>
-<span class="line" id="L1810">            .amdgcn,</span>
-<span class="line" id="L1811">            .riscv32,</span>
-<span class="line" id="L1812">            .sparc,</span>
-<span class="line" id="L1813">            .sparcel,</span>
-<span class="line" id="L1814">            .s390x,</span>
-<span class="line" id="L1815">            .lanai,</span>
-<span class="line" id="L1816">            .wasm32,</span>
-<span class="line" id="L1817">            .wasm64,</span>
-<span class="line" id="L1818">            =&gt; <span class="tok-number">8</span>,</span>
-<span class="line" id="L1819"></span>
-<span class="line" id="L1820">            .x86 =&gt; <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (target.os.tag) {</span>
-<span class="line" id="L1821">                .windows, .uefi =&gt; <span class="tok-number">8</span>,</span>
-<span class="line" id="L1822">                <span class="tok-kw">else</span> =&gt; <span class="tok-number">4</span>,</span>
-<span class="line" id="L1823">            },</span>
-<span class="line" id="L1824"></span>
-<span class="line" id="L1825">            <span class="tok-comment">// For these, LLVMABIAlignmentOfType(i128) reports 8. Note that 16</span>
+<span class="line" id="L1794">            <span class="tok-kw">else</span> =&gt; <span class="tok-str">&quot;.X&quot;</span>,</span>
+<span class="line" id="L1795">        };</span>
+<span class="line" id="L1796">    }</span>
+<span class="line" id="L1797"></span>
+<span class="line" id="L1798">    <span class="tok-kw">pub</span> <span class="tok-kw">inline</span> <span class="tok-kw">fn</span> <span class="tok-fn">maxIntAlignment</span>(target: Target) <span class="tok-type">u16</span> {</span>
+<span class="line" id="L1799">        <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (target.cpu.arch) {</span>
+<span class="line" id="L1800">            .avr =&gt; <span class="tok-number">1</span>,</span>
+<span class="line" id="L1801">            .msp430 =&gt; <span class="tok-number">2</span>,</span>
+<span class="line" id="L1802">            .xcore =&gt; <span class="tok-number">4</span>,</span>
+<span class="line" id="L1803"></span>
+<span class="line" id="L1804">            .arm,</span>
+<span class="line" id="L1805">            .armeb,</span>
+<span class="line" id="L1806">            .thumb,</span>
+<span class="line" id="L1807">            .thumbeb,</span>
+<span class="line" id="L1808">            .hexagon,</span>
+<span class="line" id="L1809">            .mips,</span>
+<span class="line" id="L1810">            .mipsel,</span>
+<span class="line" id="L1811">            .powerpc,</span>
+<span class="line" id="L1812">            .powerpcle,</span>
+<span class="line" id="L1813">            .r600,</span>
+<span class="line" id="L1814">            .amdgcn,</span>
+<span class="line" id="L1815">            .riscv32,</span>
+<span class="line" id="L1816">            .sparc,</span>
+<span class="line" id="L1817">            .sparcel,</span>
+<span class="line" id="L1818">            .s390x,</span>
+<span class="line" id="L1819">            .lanai,</span>
+<span class="line" id="L1820">            .wasm32,</span>
+<span class="line" id="L1821">            .wasm64,</span>
+<span class="line" id="L1822">            =&gt; <span class="tok-number">8</span>,</span>
+<span class="line" id="L1823"></span>
+<span class="line" id="L1824">            .x86 =&gt; <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (target.os.tag) {</span>
+<span class="line" id="L1825">                .windows, .uefi =&gt; <span class="tok-number">8</span>,</span>
+<span class="line" id="L1826">                <span class="tok-kw">else</span> =&gt; <span class="tok-number">4</span>,</span>
+<span class="line" id="L1827">            },</span>
+<span class="line" id="L1828"></span>
+<span class="line" id="L1829">            <span class="tok-comment">// For these, LLVMABIAlignmentOfType(i128) reports 8. Note that 16</span>
 </span>
-<span class="line" id="L1826">            <span class="tok-comment">// is a relevant number in three cases:</span>
+<span class="line" id="L1830">            <span class="tok-comment">// is a relevant number in three cases:</span>
 </span>
-<span class="line" id="L1827">            <span class="tok-comment">// 1. Different machine code instruction when loading into SIMD register.</span>
+<span class="line" id="L1831">            <span class="tok-comment">// 1. Different machine code instruction when loading into SIMD register.</span>
 </span>
-<span class="line" id="L1828">            <span class="tok-comment">// 2. The C ABI wants 16 for extern structs.</span>
+<span class="line" id="L1832">            <span class="tok-comment">// 2. The C ABI wants 16 for extern structs.</span>
 </span>
-<span class="line" id="L1829">            <span class="tok-comment">// 3. 16-byte cmpxchg needs 16-byte alignment.</span>
+<span class="line" id="L1833">            <span class="tok-comment">// 3. 16-byte cmpxchg needs 16-byte alignment.</span>
 </span>
-<span class="line" id="L1830">            <span class="tok-comment">// Same logic for powerpc64, mips64, sparc64.</span>
+<span class="line" id="L1834">            <span class="tok-comment">// Same logic for powerpc64, mips64, sparc64.</span>
 </span>
-<span class="line" id="L1831">            .x86_64,</span>
-<span class="line" id="L1832">            .powerpc64,</span>
-<span class="line" id="L1833">            .powerpc64le,</span>
-<span class="line" id="L1834">            .mips64,</span>
-<span class="line" id="L1835">            .mips64el,</span>
-<span class="line" id="L1836">            .sparc64,</span>
-<span class="line" id="L1837">            =&gt; <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (target.ofmt) {</span>
-<span class="line" id="L1838">                .c =&gt; <span class="tok-number">16</span>,</span>
-<span class="line" id="L1839">                <span class="tok-kw">else</span> =&gt; <span class="tok-number">8</span>,</span>
-<span class="line" id="L1840">            },</span>
-<span class="line" id="L1841"></span>
-<span class="line" id="L1842">            <span class="tok-comment">// Even LLVMABIAlignmentOfType(i128) agrees on these targets.</span>
+<span class="line" id="L1835">            .x86_64,</span>
+<span class="line" id="L1836">            .powerpc64,</span>
+<span class="line" id="L1837">            .powerpc64le,</span>
+<span class="line" id="L1838">            .mips64,</span>
+<span class="line" id="L1839">            .mips64el,</span>
+<span class="line" id="L1840">            .sparc64,</span>
+<span class="line" id="L1841">            =&gt; <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (target.ofmt) {</span>
+<span class="line" id="L1842">                .c =&gt; <span class="tok-number">16</span>,</span>
+<span class="line" id="L1843">                <span class="tok-kw">else</span> =&gt; <span class="tok-number">8</span>,</span>
+<span class="line" id="L1844">            },</span>
+<span class="line" id="L1845"></span>
+<span class="line" id="L1846">            <span class="tok-comment">// Even LLVMABIAlignmentOfType(i128) agrees on these targets.</span>
 </span>
-<span class="line" id="L1843">            .aarch64,</span>
-<span class="line" id="L1844">            .aarch64_be,</span>
-<span class="line" id="L1845">            .aarch64_32,</span>
-<span class="line" id="L1846">            .riscv64,</span>
-<span class="line" id="L1847">            .bpfel,</span>
-<span class="line" id="L1848">            .bpfeb,</span>
-<span class="line" id="L1849">            .nvptx,</span>
-<span class="line" id="L1850">            .nvptx64,</span>
-<span class="line" id="L1851">            =&gt; <span class="tok-number">16</span>,</span>
-<span class="line" id="L1852"></span>
-<span class="line" id="L1853">            <span class="tok-comment">// Below this comment are unverified but based on the fact that C requires</span>
+<span class="line" id="L1847">            .aarch64,</span>
+<span class="line" id="L1848">            .aarch64_be,</span>
+<span class="line" id="L1849">            .aarch64_32,</span>
+<span class="line" id="L1850">            .riscv64,</span>
+<span class="line" id="L1851">            .bpfel,</span>
+<span class="line" id="L1852">            .bpfeb,</span>
+<span class="line" id="L1853">            .nvptx,</span>
+<span class="line" id="L1854">            .nvptx64,</span>
+<span class="line" id="L1855">            =&gt; <span class="tok-number">16</span>,</span>
+<span class="line" id="L1856"></span>
+<span class="line" id="L1857">            <span class="tok-comment">// Below this comment are unverified but based on the fact that C requires</span>
 </span>
-<span class="line" id="L1854">            <span class="tok-comment">// int128_t to be 16 bytes aligned, it's a safe default.</span>
+<span class="line" id="L1858">            <span class="tok-comment">// int128_t to be 16 bytes aligned, it's a safe default.</span>
 </span>
-<span class="line" id="L1855">            .spu_2,</span>
-<span class="line" id="L1856">            .csky,</span>
-<span class="line" id="L1857">            .arc,</span>
-<span class="line" id="L1858">            .m68k,</span>
-<span class="line" id="L1859">            .tce,</span>
-<span class="line" id="L1860">            .tcele,</span>
-<span class="line" id="L1861">            .le32,</span>
-<span class="line" id="L1862">            .amdil,</span>
-<span class="line" id="L1863">            .hsail,</span>
-<span class="line" id="L1864">            .spir,</span>
-<span class="line" id="L1865">            .kalimba,</span>
-<span class="line" id="L1866">            .renderscript32,</span>
-<span class="line" id="L1867">            .spirv32,</span>
-<span class="line" id="L1868">            .shave,</span>
-<span class="line" id="L1869">            .le64,</span>
-<span class="line" id="L1870">            .amdil64,</span>
-<span class="line" id="L1871">            .hsail64,</span>
-<span class="line" id="L1872">            .spir64,</span>
-<span class="line" id="L1873">            .renderscript64,</span>
-<span class="line" id="L1874">            .ve,</span>
-<span class="line" id="L1875">            .spirv64,</span>
-<span class="line" id="L1876">            .dxil,</span>
-<span class="line" id="L1877">            .loongarch32,</span>
-<span class="line" id="L1878">            .loongarch64,</span>
-<span class="line" id="L1879">            =&gt; <span class="tok-number">16</span>,</span>
-<span class="line" id="L1880">        };</span>
-<span class="line" id="L1881">    }</span>
-<span class="line" id="L1882">};</span>
-<span class="line" id="L1883"></span>
-<span class="line" id="L1884"><span class="tok-kw">test</span> {</span>
-<span class="line" id="L1885">    std.testing.refAllDecls(Target.Cpu.Arch);</span>
-<span class="line" id="L1886">}</span>
+<span class="line" id="L1859">            .spu_2,</span>
+<span class="line" id="L1860">            .csky,</span>
+<span class="line" id="L1861">            .arc,</span>
+<span class="line" id="L1862">            .m68k,</span>
+<span class="line" id="L1863">            .tce,</span>
+<span class="line" id="L1864">            .tcele,</span>
+<span class="line" id="L1865">            .le32,</span>
+<span class="line" id="L1866">            .amdil,</span>
+<span class="line" id="L1867">            .hsail,</span>
+<span class="line" id="L1868">            .spir,</span>
+<span class="line" id="L1869">            .kalimba,</span>
+<span class="line" id="L1870">            .renderscript32,</span>
+<span class="line" id="L1871">            .spirv32,</span>
+<span class="line" id="L1872">            .shave,</span>
+<span class="line" id="L1873">            .le64,</span>
+<span class="line" id="L1874">            .amdil64,</span>
+<span class="line" id="L1875">            .hsail64,</span>
+<span class="line" id="L1876">            .spir64,</span>
+<span class="line" id="L1877">            .renderscript64,</span>
+<span class="line" id="L1878">            .ve,</span>
+<span class="line" id="L1879">            .spirv64,</span>
+<span class="line" id="L1880">            .dxil,</span>
+<span class="line" id="L1881">            .loongarch32,</span>
+<span class="line" id="L1882">            .loongarch64,</span>
+<span class="line" id="L1883">            =&gt; <span class="tok-number">16</span>,</span>
+<span class="line" id="L1884">        };</span>
+<span class="line" id="L1885">    }</span>
+<span class="line" id="L1886">};</span>
 <span class="line" id="L1887"></span>
+<span class="line" id="L1888"><span class="tok-kw">test</span> {</span>
+<span class="line" id="L1889">    std.testing.refAllDecls(Target.Cpu.Arch);</span>
+<span class="line" id="L1890">}</span>
+<span class="line" id="L1891"></span>
 </code></pre></body>
 </html>

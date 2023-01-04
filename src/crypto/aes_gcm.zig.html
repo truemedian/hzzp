@@ -204,7 +204,7 @@
 <span class="line" id="L91">                acc |= (computed_tag[p] ^ tag[p]);</span>
 <span class="line" id="L92">            }</span>
 <span class="line" id="L93">            <span class="tok-kw">if</span> (acc != <span class="tok-number">0</span>) {</span>
-<span class="line" id="L94">                mem.set(<span class="tok-type">u8</span>, m, <span class="tok-number">0xaa</span>);</span>
+<span class="line" id="L94">                <span class="tok-builtin">@memset</span>(m.ptr, <span class="tok-null">undefined</span>, m.len);</span>
 <span class="line" id="L95">                <span class="tok-kw">return</span> <span class="tok-kw">error</span>.AuthenticationFailed;</span>
 <span class="line" id="L96">            }</span>
 <span class="line" id="L97"></span>

@@ -515,10 +515,10 @@
 <span class="line" id="L387"></span>
 <span class="line" id="L388">    <span class="tok-kw">switch</span> (<span class="tok-builtin">@typeInfo</span>(<span class="tok-builtin">@typeInfo</span>(<span class="tok-builtin">@TypeOf</span>(f)).Fn.return_type.?)) {</span>
 <span class="line" id="L389">        .NoReturn =&gt; {</span>
-<span class="line" id="L390">            <span class="tok-builtin">@call</span>(.{}, f, args);</span>
+<span class="line" id="L390">            <span class="tok-builtin">@call</span>(.auto, f, args);</span>
 <span class="line" id="L391">        },</span>
 <span class="line" id="L392">        .Void =&gt; {</span>
-<span class="line" id="L393">            <span class="tok-builtin">@call</span>(.{}, f, args);</span>
+<span class="line" id="L393">            <span class="tok-builtin">@call</span>(.auto, f, args);</span>
 <span class="line" id="L394">            <span class="tok-kw">return</span> default_value;</span>
 <span class="line" id="L395">        },</span>
 <span class="line" id="L396">        .Int =&gt; |info| {</span>
@@ -526,7 +526,7 @@
 <span class="line" id="L398">                <span class="tok-builtin">@compileError</span>(bad_fn_ret);</span>
 <span class="line" id="L399">            }</span>
 <span class="line" id="L400"></span>
-<span class="line" id="L401">            <span class="tok-kw">const</span> status = <span class="tok-builtin">@call</span>(.{}, f, args);</span>
+<span class="line" id="L401">            <span class="tok-kw">const</span> status = <span class="tok-builtin">@call</span>(.auto, f, args);</span>
 <span class="line" id="L402">            <span class="tok-kw">if</span> (Impl != PosixThreadImpl) {</span>
 <span class="line" id="L403">                <span class="tok-kw">return</span> status;</span>
 <span class="line" id="L404">            }</span>
@@ -540,7 +540,7 @@
 <span class="line" id="L411">                <span class="tok-builtin">@compileError</span>(bad_fn_ret);</span>
 <span class="line" id="L412">            }</span>
 <span class="line" id="L413"></span>
-<span class="line" id="L414">            <span class="tok-builtin">@call</span>(.{}, f, args) <span class="tok-kw">catch</span> |err| {</span>
+<span class="line" id="L414">            <span class="tok-builtin">@call</span>(.auto, f, args) <span class="tok-kw">catch</span> |err| {</span>
 <span class="line" id="L415">                std.debug.print(<span class="tok-str">&quot;error: {s}\n&quot;</span>, .{<span class="tok-builtin">@errorName</span>(err)});</span>
 <span class="line" id="L416">                <span class="tok-kw">if</span> (<span class="tok-builtin">@errorReturnTrace</span>()) |trace| {</span>
 <span class="line" id="L417">                    std.debug.dumpStackTrace(trace.*);</span>

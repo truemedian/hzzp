@@ -358,7 +358,7 @@
 </span>
 <span class="line" id="L231">    <span class="tok-comment">// release mode fails to inline it, and we want fewer call frames in stack traces.</span>
 </span>
-<span class="line" id="L232">    _ = <span class="tok-builtin">@call</span>(.{ .modifier = .always_inline }, callMain, .{});</span>
+<span class="line" id="L232">    _ = <span class="tok-builtin">@call</span>(.always_inline, callMain, .{});</span>
 <span class="line" id="L233">}</span>
 <span class="line" id="L234"></span>
 <span class="line" id="L235"><span class="tok-kw">fn</span> <span class="tok-fn">wasi_start</span>() <span class="tok-kw">callconv</span>(.C) <span class="tok-type">void</span> {</span>
@@ -367,8 +367,8 @@
 <span class="line" id="L237">    <span class="tok-comment">// release mode fails to inline it, and we want fewer call frames in stack traces.</span>
 </span>
 <span class="line" id="L238">    <span class="tok-kw">switch</span> (builtin.wasi_exec_model) {</span>
-<span class="line" id="L239">        .reactor =&gt; _ = <span class="tok-builtin">@call</span>(.{ .modifier = .always_inline }, callMain, .{}),</span>
-<span class="line" id="L240">        .command =&gt; std.os.wasi.proc_exit(<span class="tok-builtin">@call</span>(.{ .modifier = .always_inline }, callMain, .{})),</span>
+<span class="line" id="L239">        .reactor =&gt; _ = <span class="tok-builtin">@call</span>(.always_inline, callMain, .{}),</span>
+<span class="line" id="L240">        .command =&gt; std.os.wasi.proc_exit(<span class="tok-builtin">@call</span>(.always_inline, callMain, .{})),</span>
 <span class="line" id="L241">    }</span>
 <span class="line" id="L242">}</span>
 <span class="line" id="L243"></span>
@@ -548,7 +548,7 @@
 </span>
 <span class="line" id="L375">    <span class="tok-comment">// the command line argument data.</span>
 </span>
-<span class="line" id="L376">    <span class="tok-builtin">@call</span>(.{ .modifier = .never_inline }, posixCallMainAndExit, .{});</span>
+<span class="line" id="L376">    <span class="tok-builtin">@call</span>(.never_inline, posixCallMainAndExit, .{});</span>
 <span class="line" id="L377">}</span>
 <span class="line" id="L378"></span>
 <span class="line" id="L379"><span class="tok-kw">fn</span> <span class="tok-fn">WinStartup</span>() <span class="tok-kw">callconv</span>(std.os.windows.WINAPI) <span class="tok-type">noreturn</span> {</span>
@@ -648,7 +648,7 @@
 <span class="line" id="L459">        expandStackSize(phdrs);</span>
 <span class="line" id="L460">    }</span>
 <span class="line" id="L461"></span>
-<span class="line" id="L462">    std.os.exit(<span class="tok-builtin">@call</span>(.{ .modifier = .always_inline }, callMainWithArgs, .{ argc, argv, envp }));</span>
+<span class="line" id="L462">    std.os.exit(<span class="tok-builtin">@call</span>(.always_inline, callMainWithArgs, .{ argc, argv, envp }));</span>
 <span class="line" id="L463">}</span>
 <span class="line" id="L464"></span>
 <span class="line" id="L465"><span class="tok-kw">fn</span> <span class="tok-fn">expandStackSize</span>(phdrs: []elf.Phdr) <span class="tok-type">void</span> {</span>
@@ -707,12 +707,12 @@
 <span class="line" id="L510">        expandStackSize(phdrs);</span>
 <span class="line" id="L511">    }</span>
 <span class="line" id="L512"></span>
-<span class="line" id="L513">    <span class="tok-kw">return</span> <span class="tok-builtin">@call</span>(.{ .modifier = .always_inline }, callMainWithArgs, .{ <span class="tok-builtin">@intCast</span>(<span class="tok-type">usize</span>, c_argc), <span class="tok-builtin">@ptrCast</span>([*][*:<span class="tok-number">0</span>]<span class="tok-type">u8</span>, c_argv), envp });</span>
+<span class="line" id="L513">    <span class="tok-kw">return</span> <span class="tok-builtin">@call</span>(.always_inline, callMainWithArgs, .{ <span class="tok-builtin">@intCast</span>(<span class="tok-type">usize</span>, c_argc), <span class="tok-builtin">@ptrCast</span>([*][*:<span class="tok-number">0</span>]<span class="tok-type">u8</span>, c_argv), envp });</span>
 <span class="line" id="L514">}</span>
 <span class="line" id="L515"></span>
 <span class="line" id="L516"><span class="tok-kw">fn</span> <span class="tok-fn">mainWithoutEnv</span>(c_argc: <span class="tok-type">c_int</span>, c_argv: [*c][*c]<span class="tok-type">u8</span>) <span class="tok-kw">callconv</span>(.C) <span class="tok-type">c_int</span> {</span>
 <span class="line" id="L517">    std.os.argv = <span class="tok-builtin">@ptrCast</span>([*][*:<span class="tok-number">0</span>]<span class="tok-type">u8</span>, c_argv)[<span class="tok-number">0</span>..<span class="tok-builtin">@intCast</span>(<span class="tok-type">usize</span>, c_argc)];</span>
-<span class="line" id="L518">    <span class="tok-kw">return</span> <span class="tok-builtin">@call</span>(.{ .modifier = .always_inline }, callMain, .{});</span>
+<span class="line" id="L518">    <span class="tok-kw">return</span> <span class="tok-builtin">@call</span>(.always_inline, callMain, .{});</span>
 <span class="line" id="L519">}</span>
 <span class="line" id="L520"></span>
 <span class="line" id="L521"><span class="tok-comment">// General error message for a malformed return type</span>
@@ -747,7 +747,7 @@
 </span>
 <span class="line" id="L547">    <span class="tok-comment">// and we want fewer call frames in stack traces.</span>
 </span>
-<span class="line" id="L548">    <span class="tok-kw">return</span> <span class="tok-builtin">@call</span>(.{ .modifier = .always_inline }, callMain, .{});</span>
+<span class="line" id="L548">    <span class="tok-kw">return</span> <span class="tok-builtin">@call</span>(.always_inline, callMain, .{});</span>
 <span class="line" id="L549">}</span>
 <span class="line" id="L550"></span>
 <span class="line" id="L551"><span class="tok-comment">// This is marked inline because for some reason LLVM in release mode fails to inline it,</span>
@@ -782,7 +782,7 @@
 </span>
 <span class="line" id="L576">    <span class="tok-comment">// and we want fewer call frames in stack traces.</span>
 </span>
-<span class="line" id="L577">    <span class="tok-kw">return</span> <span class="tok-builtin">@call</span>(.{ .modifier = .always_inline }, call_wWinMain, .{});</span>
+<span class="line" id="L577">    <span class="tok-kw">return</span> <span class="tok-builtin">@call</span>(.always_inline, call_wWinMain, .{});</span>
 <span class="line" id="L578">}</span>
 <span class="line" id="L579"></span>
 <span class="line" id="L580"><span class="tok-kw">fn</span> <span class="tok-fn">callMainAsync</span>(loop: *std.event.Loop) <span class="tok-kw">callconv</span>(.Async) <span class="tok-type">u8</span> {</span>
@@ -848,7 +848,7 @@
 <span class="line" id="L634">}</span>
 <span class="line" id="L635"></span>
 <span class="line" id="L636"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">call_wWinMain</span>() std.os.windows.INT {</span>
-<span class="line" id="L637">    <span class="tok-kw">const</span> MAIN_HINSTANCE = <span class="tok-builtin">@typeInfo</span>(<span class="tok-builtin">@TypeOf</span>(root.wWinMain)).Fn.args[<span class="tok-number">0</span>].arg_type.?;</span>
+<span class="line" id="L637">    <span class="tok-kw">const</span> MAIN_HINSTANCE = <span class="tok-builtin">@typeInfo</span>(<span class="tok-builtin">@TypeOf</span>(root.wWinMain)).Fn.params[<span class="tok-number">0</span>].<span class="tok-type">type</span>.?;</span>
 <span class="line" id="L638">    <span class="tok-kw">const</span> hInstance = <span class="tok-builtin">@ptrCast</span>(MAIN_HINSTANCE, std.os.windows.kernel32.GetModuleHandleW(<span class="tok-null">null</span>).?);</span>
 <span class="line" id="L639">    <span class="tok-kw">const</span> lpCmdLine = std.os.windows.kernel32.GetCommandLineW();</span>
 <span class="line" id="L640"></span>

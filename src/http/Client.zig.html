@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <title>http/Client.zig - source view</title>
+    <link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAgklEQVR4AWMYWuD7EllJIM4G4g4g5oIJ/odhOJ8wToOxSTXgNxDHoeiBMfA4+wGShjyYOCkG/IGqWQziEzYAoUAeiF9D5U+DxEg14DRU7jWIT5IBIOdCxf+A+CQZAAoopEB7QJwBCBwHiip8UYmRdrAlDpIMgApwQZNnNii5Dq0MBgCxxycBnwEd+wAAAABJRU5ErkJggg=="/>
+    <style>
+      body{
+        font-family: system-ui, -apple-system, Roboto, "Segoe UI", sans-serif;
+        margin: 0;
+        line-height: 1.5;
+      }
+
+      pre > code {
+        display: block;
+        overflow: auto;
+        line-height: normal;
+        margin: 0em;
+      }
+      .tok-kw {
+          color: #333;
+          font-weight: bold;
+      }
+      .tok-str {
+          color: #d14;
+      }
+      .tok-builtin {
+          color: #005C7A;
+      }
+      .tok-comment {
+          color: #545454;
+          font-style: italic;
+      }
+      .tok-fn {
+          color: #900;
+          font-weight: bold;
+      }
+      .tok-null {
+          color: #005C5C;
+      }
+      .tok-number {
+          color: #005C5C;
+      }
+      .tok-type {
+          color: #458;
+          font-weight: bold;
+      }
+      pre {
+        counter-reset: line;
+      }
+      pre .line:before {
+        counter-increment: line;
+        content: counter(line);
+        display: inline-block;
+        padding-right: 1em;
+        width: 2em;
+        text-align: right;
+        color: #999;
+      }
+      
+      .line {
+        width: 100%;
+        display: inline-block;
+      }
+      .line:target {
+        border-top: 1px solid #ccc;
+        border-bottom: 1px solid #ccc;
+        background: #fafafa;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body{
+            background:#222;
+            color: #ccc;
+        }
+        pre > code {
+            color: #ccc;
+            background: #222;
+            border: unset;
+        }
+        .line:target {
+            border-top: 1px solid #444;
+            border-bottom: 1px solid #444;
+            background: #333;
+        }
+        .tok-kw {
+            color: #eee;
+        }
+        .tok-str {
+            color: #2e5;
+        }
+        .tok-builtin {
+            color: #ff894c;
+        }
+        .tok-comment {
+            color: #aa7;
+        }
+        .tok-fn {
+            color: #B1A0F8;
+        }
+        .tok-null {
+            color: #ff8080;
+        }
+        .tok-number {
+            color: #ff8080;
+        }
+        .tok-type {
+            color: #68f;
+        }
+      }
+    </style>
+</head>
+<body>
+<pre><code><span class="line" id="L1"><span class="tok-comment">//! This API is a barely-touched, barely-functional http client, just the</span></span>
+<span class="line" id="L2"><span class="tok-comment">//! absolute minimum thing I needed in order to test `std.crypto.tls`. Bear</span></span>
+<span class="line" id="L3"><span class="tok-comment">//! with me and I promise the API will become useful and streamlined.</span></span>
+<span class="line" id="L4"></span>
+<span class="line" id="L5"><span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;../std.zig&quot;</span>);</span>
+<span class="line" id="L6"><span class="tok-kw">const</span> assert = std.debug.assert;</span>
+<span class="line" id="L7"><span class="tok-kw">const</span> http = std.http;</span>
+<span class="line" id="L8"><span class="tok-kw">const</span> net = std.net;</span>
+<span class="line" id="L9"><span class="tok-kw">const</span> Client = <span class="tok-builtin">@This</span>();</span>
+<span class="line" id="L10"><span class="tok-kw">const</span> Url = std.Url;</span>
+<span class="line" id="L11"></span>
+<span class="line" id="L12">allocator: std.mem.Allocator,</span>
+<span class="line" id="L13">headers: std.ArrayListUnmanaged(<span class="tok-type">u8</span>) = .{},</span>
+<span class="line" id="L14">active_requests: <span class="tok-type">usize</span> = <span class="tok-number">0</span>,</span>
+<span class="line" id="L15">ca_bundle: std.crypto.Certificate.Bundle = .{},</span>
+<span class="line" id="L16"></span>
+<span class="line" id="L17"><span class="tok-comment">/// TODO: emit error.UnexpectedEndOfStream or something like that when the read</span></span>
+<span class="line" id="L18"><span class="tok-comment">/// data does not match the content length. This is necessary since HTTPS disables</span></span>
+<span class="line" id="L19"><span class="tok-comment">/// close_notify protection on underlying TLS streams.</span></span>
+<span class="line" id="L20"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> Request = <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L21">    client: *Client,</span>
+<span class="line" id="L22">    stream: net.Stream,</span>
+<span class="line" id="L23">    headers: std.ArrayListUnmanaged(<span class="tok-type">u8</span>) = .{},</span>
+<span class="line" id="L24">    tls_client: std.crypto.tls.Client,</span>
+<span class="line" id="L25">    protocol: Protocol,</span>
+<span class="line" id="L26">    response_headers: http.Headers = .{},</span>
+<span class="line" id="L27"></span>
+<span class="line" id="L28">    <span class="tok-kw">pub</span> <span class="tok-kw">const</span> Protocol = <span class="tok-kw">enum</span> { http, https };</span>
+<span class="line" id="L29"></span>
+<span class="line" id="L30">    <span class="tok-kw">pub</span> <span class="tok-kw">const</span> Options = <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L31">        method: http.Method = .GET,</span>
+<span class="line" id="L32">    };</span>
+<span class="line" id="L33"></span>
+<span class="line" id="L34">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">deinit</span>(req: *Request) <span class="tok-type">void</span> {</span>
+<span class="line" id="L35">        req.client.active_requests -= <span class="tok-number">1</span>;</span>
+<span class="line" id="L36">        req.headers.deinit(req.client.allocator);</span>
+<span class="line" id="L37">        req.* = <span class="tok-null">undefined</span>;</span>
+<span class="line" id="L38">    }</span>
+<span class="line" id="L39"></span>
+<span class="line" id="L40">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">addHeader</span>(req: *Request, name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>, value: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>) !<span class="tok-type">void</span> {</span>
+<span class="line" id="L41">        <span class="tok-kw">const</span> gpa = req.client.allocator;</span>
+<span class="line" id="L42">        <span class="tok-comment">// Ensure an extra +2 for the \r\n in end()</span>
+</span>
+<span class="line" id="L43">        <span class="tok-kw">try</span> req.headers.ensureUnusedCapacity(gpa, name.len + value.len + <span class="tok-number">6</span>);</span>
+<span class="line" id="L44">        req.headers.appendSliceAssumeCapacity(name);</span>
+<span class="line" id="L45">        req.headers.appendSliceAssumeCapacity(<span class="tok-str">&quot;: &quot;</span>);</span>
+<span class="line" id="L46">        req.headers.appendSliceAssumeCapacity(value);</span>
+<span class="line" id="L47">        req.headers.appendSliceAssumeCapacity(<span class="tok-str">&quot;\r\n&quot;</span>);</span>
+<span class="line" id="L48">    }</span>
+<span class="line" id="L49"></span>
+<span class="line" id="L50">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">end</span>(req: *Request) !<span class="tok-type">void</span> {</span>
+<span class="line" id="L51">        req.headers.appendSliceAssumeCapacity(<span class="tok-str">&quot;\r\n&quot;</span>);</span>
+<span class="line" id="L52">        <span class="tok-kw">switch</span> (req.protocol) {</span>
+<span class="line" id="L53">            .http =&gt; {</span>
+<span class="line" id="L54">                <span class="tok-kw">try</span> req.stream.writeAll(req.headers.items);</span>
+<span class="line" id="L55">            },</span>
+<span class="line" id="L56">            .https =&gt; {</span>
+<span class="line" id="L57">                <span class="tok-kw">try</span> req.tls_client.writeAll(req.stream, req.headers.items);</span>
+<span class="line" id="L58">            },</span>
+<span class="line" id="L59">        }</span>
+<span class="line" id="L60">    }</span>
+<span class="line" id="L61"></span>
+<span class="line" id="L62">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">readAll</span>(req: *Request, buffer: []<span class="tok-type">u8</span>) !<span class="tok-type">usize</span> {</span>
+<span class="line" id="L63">        <span class="tok-kw">return</span> readAtLeast(req, buffer, buffer.len);</span>
+<span class="line" id="L64">    }</span>
+<span class="line" id="L65"></span>
+<span class="line" id="L66">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">read</span>(req: *Request, buffer: []<span class="tok-type">u8</span>) !<span class="tok-type">usize</span> {</span>
+<span class="line" id="L67">        <span class="tok-kw">return</span> readAtLeast(req, buffer, <span class="tok-number">1</span>);</span>
+<span class="line" id="L68">    }</span>
+<span class="line" id="L69"></span>
+<span class="line" id="L70">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">readAtLeast</span>(req: *Request, buffer: []<span class="tok-type">u8</span>, len: <span class="tok-type">usize</span>) !<span class="tok-type">usize</span> {</span>
+<span class="line" id="L71">        assert(len &lt;= buffer.len);</span>
+<span class="line" id="L72">        <span class="tok-kw">var</span> index: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L73">        <span class="tok-kw">while</span> (index &lt; len) {</span>
+<span class="line" id="L74">            <span class="tok-kw">const</span> headers_finished = req.response_headers.state == .finished;</span>
+<span class="line" id="L75">            <span class="tok-kw">const</span> amt = <span class="tok-kw">try</span> readAdvanced(req, buffer[index..]);</span>
+<span class="line" id="L76">            <span class="tok-kw">if</span> (amt == <span class="tok-number">0</span> <span class="tok-kw">and</span> headers_finished) <span class="tok-kw">break</span>;</span>
+<span class="line" id="L77">            index += amt;</span>
+<span class="line" id="L78">        }</span>
+<span class="line" id="L79">        <span class="tok-kw">return</span> index;</span>
+<span class="line" id="L80">    }</span>
+<span class="line" id="L81"></span>
+<span class="line" id="L82">    <span class="tok-comment">/// This one can return 0 without meaning EOF.</span></span>
+<span class="line" id="L83">    <span class="tok-comment">/// TODO change to readvAdvanced</span></span>
+<span class="line" id="L84">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">readAdvanced</span>(req: *Request, buffer: []<span class="tok-type">u8</span>) !<span class="tok-type">usize</span> {</span>
+<span class="line" id="L85">        <span class="tok-kw">if</span> (req.response_headers.state == .finished) <span class="tok-kw">return</span> readRaw(req, buffer);</span>
+<span class="line" id="L86"></span>
+<span class="line" id="L87">        <span class="tok-kw">const</span> amt = <span class="tok-kw">try</span> readRaw(req, buffer);</span>
+<span class="line" id="L88">        <span class="tok-kw">const</span> data = buffer[<span class="tok-number">0</span>..amt];</span>
+<span class="line" id="L89">        <span class="tok-kw">const</span> i = req.response_headers.feed(data);</span>
+<span class="line" id="L90">        <span class="tok-kw">if</span> (req.response_headers.state == .invalid) <span class="tok-kw">return</span> <span class="tok-kw">error</span>.InvalidHttpHeaders;</span>
+<span class="line" id="L91">        <span class="tok-kw">if</span> (i &lt; data.len) {</span>
+<span class="line" id="L92">            <span class="tok-kw">const</span> rest = data[i..];</span>
+<span class="line" id="L93">            std.mem.copy(<span class="tok-type">u8</span>, buffer, rest);</span>
+<span class="line" id="L94">            <span class="tok-kw">return</span> rest.len;</span>
+<span class="line" id="L95">        }</span>
+<span class="line" id="L96">        <span class="tok-kw">return</span> <span class="tok-number">0</span>;</span>
+<span class="line" id="L97">    }</span>
+<span class="line" id="L98"></span>
+<span class="line" id="L99">    <span class="tok-comment">/// Only abstracts over http/https.</span></span>
+<span class="line" id="L100">    <span class="tok-kw">fn</span> <span class="tok-fn">readRaw</span>(req: *Request, buffer: []<span class="tok-type">u8</span>) !<span class="tok-type">usize</span> {</span>
+<span class="line" id="L101">        <span class="tok-kw">switch</span> (req.protocol) {</span>
+<span class="line" id="L102">            .http =&gt; <span class="tok-kw">return</span> req.stream.read(buffer),</span>
+<span class="line" id="L103">            .https =&gt; <span class="tok-kw">return</span> req.tls_client.read(req.stream, buffer),</span>
+<span class="line" id="L104">        }</span>
+<span class="line" id="L105">    }</span>
+<span class="line" id="L106"></span>
+<span class="line" id="L107">    <span class="tok-comment">/// Only abstracts over http/https.</span></span>
+<span class="line" id="L108">    <span class="tok-kw">fn</span> <span class="tok-fn">readAtLeastRaw</span>(req: *Request, buffer: []<span class="tok-type">u8</span>, len: <span class="tok-type">usize</span>) !<span class="tok-type">usize</span> {</span>
+<span class="line" id="L109">        <span class="tok-kw">switch</span> (req.protocol) {</span>
+<span class="line" id="L110">            .http =&gt; <span class="tok-kw">return</span> req.stream.readAtLeast(buffer, len),</span>
+<span class="line" id="L111">            .https =&gt; <span class="tok-kw">return</span> req.tls_client.readAtLeast(req.stream, buffer, len),</span>
+<span class="line" id="L112">        }</span>
+<span class="line" id="L113">    }</span>
+<span class="line" id="L114">};</span>
+<span class="line" id="L115"></span>
+<span class="line" id="L116"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">deinit</span>(client: *Client) <span class="tok-type">void</span> {</span>
+<span class="line" id="L117">    assert(client.active_requests == <span class="tok-number">0</span>);</span>
+<span class="line" id="L118">    client.headers.deinit(client.allocator);</span>
+<span class="line" id="L119">    client.* = <span class="tok-null">undefined</span>;</span>
+<span class="line" id="L120">}</span>
+<span class="line" id="L121"></span>
+<span class="line" id="L122"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">request</span>(client: *Client, url: Url, options: Request.Options) !Request {</span>
+<span class="line" id="L123">    <span class="tok-kw">const</span> protocol = std.meta.stringToEnum(Request.Protocol, url.scheme) <span class="tok-kw">orelse</span></span>
+<span class="line" id="L124">        <span class="tok-kw">return</span> <span class="tok-kw">error</span>.UnsupportedUrlScheme;</span>
+<span class="line" id="L125">    <span class="tok-kw">const</span> port: <span class="tok-type">u16</span> = url.port <span class="tok-kw">orelse</span> <span class="tok-kw">switch</span> (protocol) {</span>
+<span class="line" id="L126">        .http =&gt; <span class="tok-number">80</span>,</span>
+<span class="line" id="L127">        .https =&gt; <span class="tok-number">443</span>,</span>
+<span class="line" id="L128">    };</span>
+<span class="line" id="L129"></span>
+<span class="line" id="L130">    <span class="tok-kw">var</span> req: Request = .{</span>
+<span class="line" id="L131">        .client = client,</span>
+<span class="line" id="L132">        .stream = <span class="tok-kw">try</span> net.tcpConnectToHost(client.allocator, url.host, port),</span>
+<span class="line" id="L133">        .protocol = protocol,</span>
+<span class="line" id="L134">        .tls_client = <span class="tok-null">undefined</span>,</span>
+<span class="line" id="L135">    };</span>
+<span class="line" id="L136">    client.active_requests += <span class="tok-number">1</span>;</span>
+<span class="line" id="L137">    <span class="tok-kw">errdefer</span> req.deinit();</span>
+<span class="line" id="L138"></span>
+<span class="line" id="L139">    <span class="tok-kw">switch</span> (protocol) {</span>
+<span class="line" id="L140">        .http =&gt; {},</span>
+<span class="line" id="L141">        .https =&gt; {</span>
+<span class="line" id="L142">            req.tls_client = <span class="tok-kw">try</span> std.crypto.tls.Client.init(req.stream, client.ca_bundle, url.host);</span>
+<span class="line" id="L143">            <span class="tok-comment">// This is appropriate for HTTPS because the HTTP headers contain</span>
+</span>
+<span class="line" id="L144">            <span class="tok-comment">// the content length which is used to detect truncation attacks.</span>
+</span>
+<span class="line" id="L145">            req.tls_client.allow_truncation_attacks = <span class="tok-null">true</span>;</span>
+<span class="line" id="L146">        },</span>
+<span class="line" id="L147">    }</span>
+<span class="line" id="L148"></span>
+<span class="line" id="L149">    <span class="tok-kw">try</span> req.headers.ensureUnusedCapacity(</span>
+<span class="line" id="L150">        client.allocator,</span>
+<span class="line" id="L151">        <span class="tok-builtin">@tagName</span>(options.method).len +</span>
+<span class="line" id="L152">            <span class="tok-number">1</span> +</span>
+<span class="line" id="L153">            url.path.len +</span>
+<span class="line" id="L154">            <span class="tok-str">&quot; HTTP/1.1\r\nHost: &quot;</span>.len +</span>
+<span class="line" id="L155">            url.host.len +</span>
+<span class="line" id="L156">            <span class="tok-str">&quot;\r\nUpgrade-Insecure-Requests: 1\r\n&quot;</span>.len +</span>
+<span class="line" id="L157">            client.headers.items.len +</span>
+<span class="line" id="L158">            <span class="tok-number">2</span>, <span class="tok-comment">// for the \r\n at the end of headers</span>
+</span>
+<span class="line" id="L159">    );</span>
+<span class="line" id="L160">    req.headers.appendSliceAssumeCapacity(<span class="tok-builtin">@tagName</span>(options.method));</span>
+<span class="line" id="L161">    req.headers.appendSliceAssumeCapacity(<span class="tok-str">&quot; &quot;</span>);</span>
+<span class="line" id="L162">    req.headers.appendSliceAssumeCapacity(url.path);</span>
+<span class="line" id="L163">    req.headers.appendSliceAssumeCapacity(<span class="tok-str">&quot; HTTP/1.1\r\nHost: &quot;</span>);</span>
+<span class="line" id="L164">    req.headers.appendSliceAssumeCapacity(url.host);</span>
+<span class="line" id="L165">    <span class="tok-kw">switch</span> (protocol) {</span>
+<span class="line" id="L166">        .https =&gt; req.headers.appendSliceAssumeCapacity(<span class="tok-str">&quot;\r\nUpgrade-Insecure-Requests: 1\r\n&quot;</span>),</span>
+<span class="line" id="L167">        .http =&gt; req.headers.appendSliceAssumeCapacity(<span class="tok-str">&quot;\r\n&quot;</span>),</span>
+<span class="line" id="L168">    }</span>
+<span class="line" id="L169">    req.headers.appendSliceAssumeCapacity(client.headers.items);</span>
+<span class="line" id="L170"></span>
+<span class="line" id="L171">    <span class="tok-kw">return</span> req;</span>
+<span class="line" id="L172">}</span>
+<span class="line" id="L173"></span>
+<span class="line" id="L174"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">addHeader</span>(client: *Client, name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>, value: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>) !<span class="tok-type">void</span> {</span>
+<span class="line" id="L175">    <span class="tok-kw">const</span> gpa = client.allocator;</span>
+<span class="line" id="L176">    <span class="tok-kw">try</span> client.headers.ensureUnusedCapacity(gpa, name.len + value.len + <span class="tok-number">4</span>);</span>
+<span class="line" id="L177">    client.headers.appendSliceAssumeCapacity(name);</span>
+<span class="line" id="L178">    client.headers.appendSliceAssumeCapacity(<span class="tok-str">&quot;: &quot;</span>);</span>
+<span class="line" id="L179">    client.headers.appendSliceAssumeCapacity(value);</span>
+<span class="line" id="L180">    client.headers.appendSliceAssumeCapacity(<span class="tok-str">&quot;\r\n&quot;</span>);</span>
+<span class="line" id="L181">}</span>
+<span class="line" id="L182"></span>
+</code></pre></body>
+</html>
