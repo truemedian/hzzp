@@ -8,6 +8,24 @@ pub inline fn normalizeLineEnding(buffer: []const u8) []const u8 {
     return buffer;
 }
 
+pub fn readUntilEndOfLine(reader: anytype, buf: []u8) ![]u8 {
+    var index: usize = 0;
+    while (true) : (index += 1) {
+        if (index == buf.len) return error.StreamTooLong;
+
+        const amt_read = try reader.read(buf[index..][0..1]);
+        if (amt_read != 1) return error.EndOfStream;
+
+        if (buf[index] == '\n') {
+            if (index > 0 and buf[index - 1] == '\r') {
+                return buf[0 .. index - 1];
+            } else {
+                return buf[0..index];
+            }
+        }
+    }
+}
+
 pub const TransferEncoding = enum {
     content_length,
     chunked,

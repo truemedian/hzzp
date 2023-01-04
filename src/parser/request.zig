@@ -96,7 +96,7 @@ pub fn RequestParser(comptime Reader: type) type {
 
             switch (self.state) {
                 .start_line => {
-                    const line = util.normalizeLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer, '\n')) orelse return error.EndOfStream);
+                    const line = try util.readUntilEndOfLine(self.reader, self.read_buffer);
                     if (line.len == 0) return Event.skip; // RFC 7230 Section 3.5
 
                     var line_it = mem.split(u8, line, " ");
@@ -105,18 +105,15 @@ pub fn RequestParser(comptime Reader: type) type {
                     const path_buffer = line_it.next() orelse return error.InvalidStatusLine;
                     const http_version_buffer = line_it.next() orelse return error.InvalidStatusLine;
 
-                    if (http_version_buffer.len != 8 or http_version_buffer[6] != '.') return error.InvalidStatusLine;
-                    if (!mem.eql(u8, http_version_buffer[0..5], "HTTP/")) return error.InvalidStatusLine;
-
-                    const major = fmt.charToDigit(http_version_buffer[5], 10) catch return error.InvalidStatusLine;
-                    const minor = fmt.charToDigit(http_version_buffer[7], 10) catch return error.InvalidStatusLine;
-
-                    const version = Version{
-                        .major = major,
-                        .minor = minor,
+                    if (http_version_buffer.len != 8) return error.InvalidStatusLine;
+                    
+                    // This is cursed, but reading a u64 is faster than comparing a string
+                    const version_magic = @ptrCast(*align(1) const u64, http_version_buffer.ptr);
+                    const version = switch (version_magic.*) {
+                        @bitCast(u64, @ptrCast(*const [8]u8, "HTTP/1.0").*) => Version{.major = 1, .minor = 0},
+                        @bitCast(u64, @ptrCast(*const [8]u8, "HTTP/1.1").*) => Version{.major = 1, .minor = 1},
+                        else => return error.InvalidStatusLine,
                     };
-
-                    if (!hzzp.supported_versions.includesVersion(version)) return error.UnsupportedVersion;
 
                     self.request_version = version;
                     self.state = .header;
@@ -130,7 +127,7 @@ pub fn RequestParser(comptime Reader: type) type {
                     };
                 },
                 .header => {
-                    const line = util.normalizeLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer, '\n')) orelse return error.EndOfStream);
+                    const line = try util.readUntilEndOfLine(self.reader, self.read_buffer);
                     if (line.len == 0) {
                         if (self.trailer_state) {
                             self.encoding = .unknown;
@@ -201,7 +198,7 @@ pub fn RequestParser(comptime Reader: type) type {
                         },
                         .chunked => {
                             if (self.read_needed == 0) {
-                                const line = util.normalizeLineEnding((try self.reader.readUntilDelimiterOrEof(self.read_buffer, '\n')) orelse return error.EndOfStream);
+                                const line = try util.readUntilEndOfLine(self.reader, self.read_buffer);
                                 const chunk_len = fmt.parseUnsigned(usize, line, 16) catch return error.InvalidChunkedPayload;
 
                                 if (chunk_len == 0) {
