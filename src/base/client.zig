@@ -287,7 +287,7 @@ test "decodes a simple response" {
     try client.writeStatusLine("GET", "/");
     try client.writeHeaderValue("Header1", "value1");
     try client.writeHeader(.{ .name = "Header2", .value = "value2" });
-    try client.writeHeaders(std.mem.span(&headers));
+    try client.writeHeaders(&headers);
     try client.finishHeaders();
     try client.writePayload("payload");
 
