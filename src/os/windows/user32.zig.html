@@ -141,7 +141,7 @@
 <span class="line" id="L28"><span class="tok-kw">const</span> HCURSOR = windows.HCURSOR;</span>
 <span class="line" id="L29"><span class="tok-kw">const</span> HBRUSH = windows.HBRUSH;</span>
 <span class="line" id="L30"></span>
-<span class="line" id="L31"><span class="tok-kw">fn</span> <span class="tok-fn">selectSymbol</span>(<span class="tok-kw">comptime</span> function_static: <span class="tok-kw">anytype</span>, function_dynamic: <span class="tok-builtin">@TypeOf</span>(function_static), <span class="tok-kw">comptime</span> os: std.Target.Os.WindowsVersion) <span class="tok-builtin">@TypeOf</span>(function_static) {</span>
+<span class="line" id="L31"><span class="tok-kw">fn</span> <span class="tok-fn">selectSymbol</span>(<span class="tok-kw">comptime</span> function_static: <span class="tok-kw">anytype</span>, function_dynamic: *<span class="tok-kw">const</span> <span class="tok-builtin">@TypeOf</span>(function_static), <span class="tok-kw">comptime</span> os: std.Target.Os.WindowsVersion) *<span class="tok-kw">const</span> <span class="tok-builtin">@TypeOf</span>(function_static) {</span>
 <span class="line" id="L32">    <span class="tok-kw">comptime</span> {</span>
 <span class="line" id="L33">        <span class="tok-kw">const</span> sym_ok = builtin.os.isAtLeast(.windows, os);</span>
 <span class="line" id="L34">        <span class="tok-kw">if</span> (sym_ok == <span class="tok-null">true</span>) <span class="tok-kw">return</span> function_static;</span>

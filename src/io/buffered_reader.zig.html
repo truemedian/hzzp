@@ -161,153 +161,157 @@
 <span class="line" id="L45">    };</span>
 <span class="line" id="L46">}</span>
 <span class="line" id="L47"></span>
-<span class="line" id="L48"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">bufferedReader</span>(underlying_stream: <span class="tok-kw">anytype</span>) BufferedReader(<span class="tok-number">4096</span>, <span class="tok-builtin">@TypeOf</span>(underlying_stream)) {</span>
-<span class="line" id="L49">    <span class="tok-kw">return</span> .{ .unbuffered_reader = underlying_stream };</span>
+<span class="line" id="L48"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">bufferedReader</span>(reader: <span class="tok-kw">anytype</span>) BufferedReader(<span class="tok-number">4096</span>, <span class="tok-builtin">@TypeOf</span>(reader)) {</span>
+<span class="line" id="L49">    <span class="tok-kw">return</span> .{ .unbuffered_reader = reader };</span>
 <span class="line" id="L50">}</span>
 <span class="line" id="L51"></span>
-<span class="line" id="L52"><span class="tok-kw">test</span> <span class="tok-str">&quot;io.BufferedReader OneByte&quot;</span> {</span>
-<span class="line" id="L53">    <span class="tok-kw">const</span> OneByteReadReader = <span class="tok-kw">struct</span> {</span>
-<span class="line" id="L54">        str: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
-<span class="line" id="L55">        curr: <span class="tok-type">usize</span>,</span>
-<span class="line" id="L56"></span>
-<span class="line" id="L57">        <span class="tok-kw">const</span> Error = <span class="tok-kw">error</span>{NoError};</span>
-<span class="line" id="L58">        <span class="tok-kw">const</span> Self = <span class="tok-builtin">@This</span>();</span>
-<span class="line" id="L59">        <span class="tok-kw">const</span> Reader = io.Reader(*Self, Error, read);</span>
+<span class="line" id="L52"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">bufferedReaderSize</span>(<span class="tok-kw">comptime</span> size: <span class="tok-type">usize</span>, reader: <span class="tok-kw">anytype</span>) BufferedReader(size, <span class="tok-builtin">@TypeOf</span>(reader)) {</span>
+<span class="line" id="L53">    <span class="tok-kw">return</span> .{ .unbuffered_reader = reader };</span>
+<span class="line" id="L54">}</span>
+<span class="line" id="L55"></span>
+<span class="line" id="L56"><span class="tok-kw">test</span> <span class="tok-str">&quot;io.BufferedReader OneByte&quot;</span> {</span>
+<span class="line" id="L57">    <span class="tok-kw">const</span> OneByteReadReader = <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L58">        str: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
+<span class="line" id="L59">        curr: <span class="tok-type">usize</span>,</span>
 <span class="line" id="L60"></span>
-<span class="line" id="L61">        <span class="tok-kw">fn</span> <span class="tok-fn">init</span>(str: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>) Self {</span>
-<span class="line" id="L62">            <span class="tok-kw">return</span> Self{</span>
-<span class="line" id="L63">                .str = str,</span>
-<span class="line" id="L64">                .curr = <span class="tok-number">0</span>,</span>
-<span class="line" id="L65">            };</span>
-<span class="line" id="L66">        }</span>
-<span class="line" id="L67"></span>
-<span class="line" id="L68">        <span class="tok-kw">fn</span> <span class="tok-fn">read</span>(self: *Self, dest: []<span class="tok-type">u8</span>) Error!<span class="tok-type">usize</span> {</span>
-<span class="line" id="L69">            <span class="tok-kw">if</span> (self.str.len &lt;= self.curr <span class="tok-kw">or</span> dest.len == <span class="tok-number">0</span>)</span>
-<span class="line" id="L70">                <span class="tok-kw">return</span> <span class="tok-number">0</span>;</span>
+<span class="line" id="L61">        <span class="tok-kw">const</span> Error = <span class="tok-kw">error</span>{NoError};</span>
+<span class="line" id="L62">        <span class="tok-kw">const</span> Self = <span class="tok-builtin">@This</span>();</span>
+<span class="line" id="L63">        <span class="tok-kw">const</span> Reader = io.Reader(*Self, Error, read);</span>
+<span class="line" id="L64"></span>
+<span class="line" id="L65">        <span class="tok-kw">fn</span> <span class="tok-fn">init</span>(str: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>) Self {</span>
+<span class="line" id="L66">            <span class="tok-kw">return</span> Self{</span>
+<span class="line" id="L67">                .str = str,</span>
+<span class="line" id="L68">                .curr = <span class="tok-number">0</span>,</span>
+<span class="line" id="L69">            };</span>
+<span class="line" id="L70">        }</span>
 <span class="line" id="L71"></span>
-<span class="line" id="L72">            dest[<span class="tok-number">0</span>] = self.str[self.curr];</span>
-<span class="line" id="L73">            self.curr += <span class="tok-number">1</span>;</span>
-<span class="line" id="L74">            <span class="tok-kw">return</span> <span class="tok-number">1</span>;</span>
-<span class="line" id="L75">        }</span>
-<span class="line" id="L76"></span>
-<span class="line" id="L77">        <span class="tok-kw">fn</span> <span class="tok-fn">reader</span>(self: *Self) Reader {</span>
-<span class="line" id="L78">            <span class="tok-kw">return</span> .{ .context = self };</span>
+<span class="line" id="L72">        <span class="tok-kw">fn</span> <span class="tok-fn">read</span>(self: *Self, dest: []<span class="tok-type">u8</span>) Error!<span class="tok-type">usize</span> {</span>
+<span class="line" id="L73">            <span class="tok-kw">if</span> (self.str.len &lt;= self.curr <span class="tok-kw">or</span> dest.len == <span class="tok-number">0</span>)</span>
+<span class="line" id="L74">                <span class="tok-kw">return</span> <span class="tok-number">0</span>;</span>
+<span class="line" id="L75"></span>
+<span class="line" id="L76">            dest[<span class="tok-number">0</span>] = self.str[self.curr];</span>
+<span class="line" id="L77">            self.curr += <span class="tok-number">1</span>;</span>
+<span class="line" id="L78">            <span class="tok-kw">return</span> <span class="tok-number">1</span>;</span>
 <span class="line" id="L79">        }</span>
-<span class="line" id="L80">    };</span>
-<span class="line" id="L81"></span>
-<span class="line" id="L82">    <span class="tok-kw">const</span> str = <span class="tok-str">&quot;This is a test&quot;</span>;</span>
-<span class="line" id="L83">    <span class="tok-kw">var</span> one_byte_stream = OneByteReadReader.init(str);</span>
-<span class="line" id="L84">    <span class="tok-kw">var</span> buf_reader = bufferedReader(one_byte_stream.reader());</span>
-<span class="line" id="L85">    <span class="tok-kw">const</span> stream = buf_reader.reader();</span>
-<span class="line" id="L86"></span>
-<span class="line" id="L87">    <span class="tok-kw">const</span> res = <span class="tok-kw">try</span> stream.readAllAlloc(testing.allocator, str.len + <span class="tok-number">1</span>);</span>
-<span class="line" id="L88">    <span class="tok-kw">defer</span> testing.allocator.free(res);</span>
-<span class="line" id="L89">    <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, str, res);</span>
-<span class="line" id="L90">}</span>
-<span class="line" id="L91"></span>
-<span class="line" id="L92"><span class="tok-kw">fn</span> <span class="tok-fn">smallBufferedReader</span>(underlying_stream: <span class="tok-kw">anytype</span>) BufferedReader(<span class="tok-number">8</span>, <span class="tok-builtin">@TypeOf</span>(underlying_stream)) {</span>
-<span class="line" id="L93">    <span class="tok-kw">return</span> .{ .unbuffered_reader = underlying_stream };</span>
+<span class="line" id="L80"></span>
+<span class="line" id="L81">        <span class="tok-kw">fn</span> <span class="tok-fn">reader</span>(self: *Self) Reader {</span>
+<span class="line" id="L82">            <span class="tok-kw">return</span> .{ .context = self };</span>
+<span class="line" id="L83">        }</span>
+<span class="line" id="L84">    };</span>
+<span class="line" id="L85"></span>
+<span class="line" id="L86">    <span class="tok-kw">const</span> str = <span class="tok-str">&quot;This is a test&quot;</span>;</span>
+<span class="line" id="L87">    <span class="tok-kw">var</span> one_byte_stream = OneByteReadReader.init(str);</span>
+<span class="line" id="L88">    <span class="tok-kw">var</span> buf_reader = bufferedReader(one_byte_stream.reader());</span>
+<span class="line" id="L89">    <span class="tok-kw">const</span> stream = buf_reader.reader();</span>
+<span class="line" id="L90"></span>
+<span class="line" id="L91">    <span class="tok-kw">const</span> res = <span class="tok-kw">try</span> stream.readAllAlloc(testing.allocator, str.len + <span class="tok-number">1</span>);</span>
+<span class="line" id="L92">    <span class="tok-kw">defer</span> testing.allocator.free(res);</span>
+<span class="line" id="L93">    <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, str, res);</span>
 <span class="line" id="L94">}</span>
-<span class="line" id="L95"><span class="tok-kw">test</span> <span class="tok-str">&quot;io.BufferedReader Block&quot;</span> {</span>
-<span class="line" id="L96">    <span class="tok-kw">const</span> BlockReader = <span class="tok-kw">struct</span> {</span>
-<span class="line" id="L97">        block: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
-<span class="line" id="L98">        reads_allowed: <span class="tok-type">usize</span>,</span>
-<span class="line" id="L99">        curr_read: <span class="tok-type">usize</span>,</span>
-<span class="line" id="L100"></span>
-<span class="line" id="L101">        <span class="tok-kw">const</span> Error = <span class="tok-kw">error</span>{NoError};</span>
-<span class="line" id="L102">        <span class="tok-kw">const</span> Self = <span class="tok-builtin">@This</span>();</span>
-<span class="line" id="L103">        <span class="tok-kw">const</span> Reader = io.Reader(*Self, Error, read);</span>
+<span class="line" id="L95"></span>
+<span class="line" id="L96"><span class="tok-kw">fn</span> <span class="tok-fn">smallBufferedReader</span>(underlying_stream: <span class="tok-kw">anytype</span>) BufferedReader(<span class="tok-number">8</span>, <span class="tok-builtin">@TypeOf</span>(underlying_stream)) {</span>
+<span class="line" id="L97">    <span class="tok-kw">return</span> .{ .unbuffered_reader = underlying_stream };</span>
+<span class="line" id="L98">}</span>
+<span class="line" id="L99"><span class="tok-kw">test</span> <span class="tok-str">&quot;io.BufferedReader Block&quot;</span> {</span>
+<span class="line" id="L100">    <span class="tok-kw">const</span> BlockReader = <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L101">        block: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
+<span class="line" id="L102">        reads_allowed: <span class="tok-type">usize</span>,</span>
+<span class="line" id="L103">        curr_read: <span class="tok-type">usize</span>,</span>
 <span class="line" id="L104"></span>
-<span class="line" id="L105">        <span class="tok-kw">fn</span> <span class="tok-fn">init</span>(block: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>, reads_allowed: <span class="tok-type">usize</span>) Self {</span>
-<span class="line" id="L106">            <span class="tok-kw">return</span> Self{</span>
-<span class="line" id="L107">                .block = block,</span>
-<span class="line" id="L108">                .reads_allowed = reads_allowed,</span>
-<span class="line" id="L109">                .curr_read = <span class="tok-number">0</span>,</span>
-<span class="line" id="L110">            };</span>
-<span class="line" id="L111">        }</span>
-<span class="line" id="L112"></span>
-<span class="line" id="L113">        <span class="tok-kw">fn</span> <span class="tok-fn">read</span>(self: *Self, dest: []<span class="tok-type">u8</span>) Error!<span class="tok-type">usize</span> {</span>
-<span class="line" id="L114">            <span class="tok-kw">if</span> (self.curr_read &gt;= self.reads_allowed) {</span>
-<span class="line" id="L115">                <span class="tok-kw">return</span> <span class="tok-number">0</span>;</span>
-<span class="line" id="L116">            }</span>
-<span class="line" id="L117">            std.debug.assert(dest.len &gt;= self.block.len);</span>
-<span class="line" id="L118">            std.mem.copy(<span class="tok-type">u8</span>, dest, self.block);</span>
-<span class="line" id="L119"></span>
-<span class="line" id="L120">            self.curr_read += <span class="tok-number">1</span>;</span>
-<span class="line" id="L121">            <span class="tok-kw">return</span> self.block.len;</span>
-<span class="line" id="L122">        }</span>
+<span class="line" id="L105">        <span class="tok-kw">const</span> Error = <span class="tok-kw">error</span>{NoError};</span>
+<span class="line" id="L106">        <span class="tok-kw">const</span> Self = <span class="tok-builtin">@This</span>();</span>
+<span class="line" id="L107">        <span class="tok-kw">const</span> Reader = io.Reader(*Self, Error, read);</span>
+<span class="line" id="L108"></span>
+<span class="line" id="L109">        <span class="tok-kw">fn</span> <span class="tok-fn">init</span>(block: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>, reads_allowed: <span class="tok-type">usize</span>) Self {</span>
+<span class="line" id="L110">            <span class="tok-kw">return</span> Self{</span>
+<span class="line" id="L111">                .block = block,</span>
+<span class="line" id="L112">                .reads_allowed = reads_allowed,</span>
+<span class="line" id="L113">                .curr_read = <span class="tok-number">0</span>,</span>
+<span class="line" id="L114">            };</span>
+<span class="line" id="L115">        }</span>
+<span class="line" id="L116"></span>
+<span class="line" id="L117">        <span class="tok-kw">fn</span> <span class="tok-fn">read</span>(self: *Self, dest: []<span class="tok-type">u8</span>) Error!<span class="tok-type">usize</span> {</span>
+<span class="line" id="L118">            <span class="tok-kw">if</span> (self.curr_read &gt;= self.reads_allowed) {</span>
+<span class="line" id="L119">                <span class="tok-kw">return</span> <span class="tok-number">0</span>;</span>
+<span class="line" id="L120">            }</span>
+<span class="line" id="L121">            std.debug.assert(dest.len &gt;= self.block.len);</span>
+<span class="line" id="L122">            std.mem.copy(<span class="tok-type">u8</span>, dest, self.block);</span>
 <span class="line" id="L123"></span>
-<span class="line" id="L124">        <span class="tok-kw">fn</span> <span class="tok-fn">reader</span>(self: *Self) Reader {</span>
-<span class="line" id="L125">            <span class="tok-kw">return</span> .{ .context = self };</span>
+<span class="line" id="L124">            self.curr_read += <span class="tok-number">1</span>;</span>
+<span class="line" id="L125">            <span class="tok-kw">return</span> self.block.len;</span>
 <span class="line" id="L126">        }</span>
-<span class="line" id="L127">    };</span>
-<span class="line" id="L128"></span>
-<span class="line" id="L129">    <span class="tok-kw">const</span> block = <span class="tok-str">&quot;0123&quot;</span>;</span>
-<span class="line" id="L130"></span>
-<span class="line" id="L131">    <span class="tok-comment">// len out == block</span>
+<span class="line" id="L127"></span>
+<span class="line" id="L128">        <span class="tok-kw">fn</span> <span class="tok-fn">reader</span>(self: *Self) Reader {</span>
+<span class="line" id="L129">            <span class="tok-kw">return</span> .{ .context = self };</span>
+<span class="line" id="L130">        }</span>
+<span class="line" id="L131">    };</span>
+<span class="line" id="L132"></span>
+<span class="line" id="L133">    <span class="tok-kw">const</span> block = <span class="tok-str">&quot;0123&quot;</span>;</span>
+<span class="line" id="L134"></span>
+<span class="line" id="L135">    <span class="tok-comment">// len out == block</span>
 </span>
-<span class="line" id="L132">    {</span>
-<span class="line" id="L133">        <span class="tok-kw">var</span> block_reader = BlockReader.init(block, <span class="tok-number">2</span>);</span>
-<span class="line" id="L134">        <span class="tok-kw">var</span> test_buf_reader = BufferedReader(<span class="tok-number">4</span>, BlockReader){ .unbuffered_reader = block_reader };</span>
-<span class="line" id="L135">        <span class="tok-kw">var</span> out_buf: [<span class="tok-number">4</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;</span>
-<span class="line" id="L136">        _ = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
-<span class="line" id="L137">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, &amp;out_buf, block);</span>
-<span class="line" id="L138">        _ = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
-<span class="line" id="L139">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, &amp;out_buf, block);</span>
-<span class="line" id="L140">        <span class="tok-kw">try</span> testing.expectEqual(<span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf), <span class="tok-number">0</span>);</span>
-<span class="line" id="L141">    }</span>
-<span class="line" id="L142"></span>
-<span class="line" id="L143">    <span class="tok-comment">// len out &lt; block</span>
+<span class="line" id="L136">    {</span>
+<span class="line" id="L137">        <span class="tok-kw">var</span> block_reader = BlockReader.init(block, <span class="tok-number">2</span>);</span>
+<span class="line" id="L138">        <span class="tok-kw">var</span> test_buf_reader = BufferedReader(<span class="tok-number">4</span>, BlockReader){ .unbuffered_reader = block_reader };</span>
+<span class="line" id="L139">        <span class="tok-kw">var</span> out_buf: [<span class="tok-number">4</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;</span>
+<span class="line" id="L140">        _ = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
+<span class="line" id="L141">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, &amp;out_buf, block);</span>
+<span class="line" id="L142">        _ = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
+<span class="line" id="L143">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, &amp;out_buf, block);</span>
+<span class="line" id="L144">        <span class="tok-kw">try</span> testing.expectEqual(<span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf), <span class="tok-number">0</span>);</span>
+<span class="line" id="L145">    }</span>
+<span class="line" id="L146"></span>
+<span class="line" id="L147">    <span class="tok-comment">// len out &lt; block</span>
 </span>
-<span class="line" id="L144">    {</span>
-<span class="line" id="L145">        <span class="tok-kw">var</span> block_reader = BlockReader.init(block, <span class="tok-number">2</span>);</span>
-<span class="line" id="L146">        <span class="tok-kw">var</span> test_buf_reader = BufferedReader(<span class="tok-number">4</span>, BlockReader){ .unbuffered_reader = block_reader };</span>
-<span class="line" id="L147">        <span class="tok-kw">var</span> out_buf: [<span class="tok-number">3</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;</span>
-<span class="line" id="L148">        _ = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
-<span class="line" id="L149">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, &amp;out_buf, <span class="tok-str">&quot;012&quot;</span>);</span>
-<span class="line" id="L150">        _ = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
-<span class="line" id="L151">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, &amp;out_buf, <span class="tok-str">&quot;301&quot;</span>);</span>
-<span class="line" id="L152">        <span class="tok-kw">const</span> n = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
-<span class="line" id="L153">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, out_buf[<span class="tok-number">0</span>..n], <span class="tok-str">&quot;23&quot;</span>);</span>
-<span class="line" id="L154">        <span class="tok-kw">try</span> testing.expectEqual(<span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf), <span class="tok-number">0</span>);</span>
-<span class="line" id="L155">    }</span>
-<span class="line" id="L156"></span>
-<span class="line" id="L157">    <span class="tok-comment">// len out &gt; block</span>
+<span class="line" id="L148">    {</span>
+<span class="line" id="L149">        <span class="tok-kw">var</span> block_reader = BlockReader.init(block, <span class="tok-number">2</span>);</span>
+<span class="line" id="L150">        <span class="tok-kw">var</span> test_buf_reader = BufferedReader(<span class="tok-number">4</span>, BlockReader){ .unbuffered_reader = block_reader };</span>
+<span class="line" id="L151">        <span class="tok-kw">var</span> out_buf: [<span class="tok-number">3</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;</span>
+<span class="line" id="L152">        _ = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
+<span class="line" id="L153">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, &amp;out_buf, <span class="tok-str">&quot;012&quot;</span>);</span>
+<span class="line" id="L154">        _ = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
+<span class="line" id="L155">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, &amp;out_buf, <span class="tok-str">&quot;301&quot;</span>);</span>
+<span class="line" id="L156">        <span class="tok-kw">const</span> n = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
+<span class="line" id="L157">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, out_buf[<span class="tok-number">0</span>..n], <span class="tok-str">&quot;23&quot;</span>);</span>
+<span class="line" id="L158">        <span class="tok-kw">try</span> testing.expectEqual(<span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf), <span class="tok-number">0</span>);</span>
+<span class="line" id="L159">    }</span>
+<span class="line" id="L160"></span>
+<span class="line" id="L161">    <span class="tok-comment">// len out &gt; block</span>
 </span>
-<span class="line" id="L158">    {</span>
-<span class="line" id="L159">        <span class="tok-kw">var</span> block_reader = BlockReader.init(block, <span class="tok-number">2</span>);</span>
-<span class="line" id="L160">        <span class="tok-kw">var</span> test_buf_reader = BufferedReader(<span class="tok-number">4</span>, BlockReader){ .unbuffered_reader = block_reader };</span>
-<span class="line" id="L161">        <span class="tok-kw">var</span> out_buf: [<span class="tok-number">5</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;</span>
-<span class="line" id="L162">        _ = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
-<span class="line" id="L163">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, &amp;out_buf, <span class="tok-str">&quot;01230&quot;</span>);</span>
-<span class="line" id="L164">        <span class="tok-kw">const</span> n = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
-<span class="line" id="L165">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, out_buf[<span class="tok-number">0</span>..n], <span class="tok-str">&quot;123&quot;</span>);</span>
-<span class="line" id="L166">        <span class="tok-kw">try</span> testing.expectEqual(<span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf), <span class="tok-number">0</span>);</span>
-<span class="line" id="L167">    }</span>
-<span class="line" id="L168"></span>
-<span class="line" id="L169">    <span class="tok-comment">// len out == 0</span>
+<span class="line" id="L162">    {</span>
+<span class="line" id="L163">        <span class="tok-kw">var</span> block_reader = BlockReader.init(block, <span class="tok-number">2</span>);</span>
+<span class="line" id="L164">        <span class="tok-kw">var</span> test_buf_reader = BufferedReader(<span class="tok-number">4</span>, BlockReader){ .unbuffered_reader = block_reader };</span>
+<span class="line" id="L165">        <span class="tok-kw">var</span> out_buf: [<span class="tok-number">5</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;</span>
+<span class="line" id="L166">        _ = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
+<span class="line" id="L167">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, &amp;out_buf, <span class="tok-str">&quot;01230&quot;</span>);</span>
+<span class="line" id="L168">        <span class="tok-kw">const</span> n = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
+<span class="line" id="L169">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, out_buf[<span class="tok-number">0</span>..n], <span class="tok-str">&quot;123&quot;</span>);</span>
+<span class="line" id="L170">        <span class="tok-kw">try</span> testing.expectEqual(<span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf), <span class="tok-number">0</span>);</span>
+<span class="line" id="L171">    }</span>
+<span class="line" id="L172"></span>
+<span class="line" id="L173">    <span class="tok-comment">// len out == 0</span>
 </span>
-<span class="line" id="L170">    {</span>
-<span class="line" id="L171">        <span class="tok-kw">var</span> block_reader = BlockReader.init(block, <span class="tok-number">2</span>);</span>
-<span class="line" id="L172">        <span class="tok-kw">var</span> test_buf_reader = BufferedReader(<span class="tok-number">4</span>, BlockReader){ .unbuffered_reader = block_reader };</span>
-<span class="line" id="L173">        <span class="tok-kw">var</span> out_buf: [<span class="tok-number">0</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;</span>
-<span class="line" id="L174">        _ = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
-<span class="line" id="L175">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, &amp;out_buf, <span class="tok-str">&quot;&quot;</span>);</span>
-<span class="line" id="L176">    }</span>
-<span class="line" id="L177"></span>
-<span class="line" id="L178">    <span class="tok-comment">// len bufreader buf &gt; block</span>
+<span class="line" id="L174">    {</span>
+<span class="line" id="L175">        <span class="tok-kw">var</span> block_reader = BlockReader.init(block, <span class="tok-number">2</span>);</span>
+<span class="line" id="L176">        <span class="tok-kw">var</span> test_buf_reader = BufferedReader(<span class="tok-number">4</span>, BlockReader){ .unbuffered_reader = block_reader };</span>
+<span class="line" id="L177">        <span class="tok-kw">var</span> out_buf: [<span class="tok-number">0</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;</span>
+<span class="line" id="L178">        _ = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
+<span class="line" id="L179">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, &amp;out_buf, <span class="tok-str">&quot;&quot;</span>);</span>
+<span class="line" id="L180">    }</span>
+<span class="line" id="L181"></span>
+<span class="line" id="L182">    <span class="tok-comment">// len bufreader buf &gt; block</span>
 </span>
-<span class="line" id="L179">    {</span>
-<span class="line" id="L180">        <span class="tok-kw">var</span> block_reader = BlockReader.init(block, <span class="tok-number">2</span>);</span>
-<span class="line" id="L181">        <span class="tok-kw">var</span> test_buf_reader = BufferedReader(<span class="tok-number">5</span>, BlockReader){ .unbuffered_reader = block_reader };</span>
-<span class="line" id="L182">        <span class="tok-kw">var</span> out_buf: [<span class="tok-number">4</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;</span>
-<span class="line" id="L183">        _ = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
-<span class="line" id="L184">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, &amp;out_buf, block);</span>
-<span class="line" id="L185">        _ = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
-<span class="line" id="L186">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, &amp;out_buf, block);</span>
-<span class="line" id="L187">        <span class="tok-kw">try</span> testing.expectEqual(<span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf), <span class="tok-number">0</span>);</span>
-<span class="line" id="L188">    }</span>
-<span class="line" id="L189">}</span>
-<span class="line" id="L190"></span>
+<span class="line" id="L183">    {</span>
+<span class="line" id="L184">        <span class="tok-kw">var</span> block_reader = BlockReader.init(block, <span class="tok-number">2</span>);</span>
+<span class="line" id="L185">        <span class="tok-kw">var</span> test_buf_reader = BufferedReader(<span class="tok-number">5</span>, BlockReader){ .unbuffered_reader = block_reader };</span>
+<span class="line" id="L186">        <span class="tok-kw">var</span> out_buf: [<span class="tok-number">4</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;</span>
+<span class="line" id="L187">        _ = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
+<span class="line" id="L188">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, &amp;out_buf, block);</span>
+<span class="line" id="L189">        _ = <span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf);</span>
+<span class="line" id="L190">        <span class="tok-kw">try</span> testing.expectEqualSlices(<span class="tok-type">u8</span>, &amp;out_buf, block);</span>
+<span class="line" id="L191">        <span class="tok-kw">try</span> testing.expectEqual(<span class="tok-kw">try</span> test_buf_reader.read(&amp;out_buf), <span class="tok-number">0</span>);</span>
+<span class="line" id="L192">    }</span>
+<span class="line" id="L193">}</span>
+<span class="line" id="L194"></span>
 </code></pre></body>
 </html>

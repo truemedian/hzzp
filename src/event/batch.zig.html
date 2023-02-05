@@ -130,7 +130,7 @@
 <span class="line" id="L17">    <span class="tok-kw">comptime</span> async_behavior: <span class="tok-kw">enum</span> {</span>
 <span class="line" id="L18">        <span class="tok-comment">/// Observe the value of `std.io.is_async` to decide whether `add`</span></span>
 <span class="line" id="L19">        <span class="tok-comment">/// and `wait` will be async functions. Asserts that the jobs do not suspend when</span></span>
-<span class="line" id="L20">        <span class="tok-comment">/// `std.io.mode == .blocking`. This is a generally safe assumption, and the</span></span>
+<span class="line" id="L20">        <span class="tok-comment">/// `std.options.io_mode == .blocking`. This is a generally safe assumption, and the</span></span>
 <span class="line" id="L21">        <span class="tok-comment">/// usual recommended option for this parameter.</span></span>
 <span class="line" id="L22">        auto_async,</span>
 <span class="line" id="L23"></span>

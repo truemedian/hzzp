@@ -1001,7 +1001,7 @@
 </span>
 <span class="line" id="L835">                        <span class="tok-kw">continue</span> :start_over;</span>
 <span class="line" id="L836">                    }</span>
-<span class="line" id="L837">                    <span class="tok-kw">const</span> name = mem.span(self.buf[name_index .. name_index + entry.d_namlen]);</span>
+<span class="line" id="L837">                    <span class="tok-kw">const</span> name = self.buf[name_index .. name_index + entry.d_namlen];</span>
 <span class="line" id="L838"></span>
 <span class="line" id="L839">                    <span class="tok-kw">const</span> next_index = name_index + entry.d_namlen;</span>
 <span class="line" id="L840">                    self.index = next_index;</span>
@@ -1989,7 +1989,7 @@
 <span class="line" id="L1763">        <span class="tok-kw">var</span> nt_name = w.UNICODE_STRING{</span>
 <span class="line" id="L1764">            .Length = path_len_bytes,</span>
 <span class="line" id="L1765">            .MaximumLength = path_len_bytes,</span>
-<span class="line" id="L1766">            .Buffer = <span class="tok-builtin">@intToPtr</span>([*]<span class="tok-type">u16</span>, <span class="tok-builtin">@ptrToInt</span>(sub_path_w)),</span>
+<span class="line" id="L1766">            .Buffer = <span class="tok-builtin">@qualCast</span>([*:<span class="tok-number">0</span>]<span class="tok-type">u16</span>, sub_path_w),</span>
 <span class="line" id="L1767">        };</span>
 <span class="line" id="L1768">        <span class="tok-kw">var</span> attr = w.OBJECT_ATTRIBUTES{</span>
 <span class="line" id="L1769">            .Length = <span class="tok-builtin">@sizeOf</span>(w.OBJECT_ATTRIBUTES),</span>
@@ -2927,16 +2927,16 @@
 <span class="line" id="L2661">    <span class="tok-kw">if</span> (builtin.os.tag == .windows) {</span>
 <span class="line" id="L2662">        <span class="tok-kw">return</span> Dir{ .fd = os.windows.peb().ProcessParameters.CurrentDirectory.Handle };</span>
 <span class="line" id="L2663">    } <span class="tok-kw">else</span> <span class="tok-kw">if</span> (builtin.os.tag == .wasi) {</span>
-<span class="line" id="L2664">        <span class="tok-kw">if</span> (<span class="tok-builtin">@hasDecl</span>(root, <span class="tok-str">&quot;wasi_cwd&quot;</span>)) {</span>
-<span class="line" id="L2665">            <span class="tok-kw">return</span> root.wasi_cwd();</span>
-<span class="line" id="L2666">        } <span class="tok-kw">else</span> {</span>
-<span class="line" id="L2667">            <span class="tok-comment">// Expect the first preopen to be current working directory.</span>
+<span class="line" id="L2664">        <span class="tok-kw">return</span> std.options.wasiCwd();</span>
+<span class="line" id="L2665">    } <span class="tok-kw">else</span> {</span>
+<span class="line" id="L2666">        <span class="tok-kw">return</span> Dir{ .fd = os.AT.FDCWD };</span>
+<span class="line" id="L2667">    }</span>
+<span class="line" id="L2668">}</span>
+<span class="line" id="L2669"></span>
+<span class="line" id="L2670"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">defaultWasiCwd</span>() Dir {</span>
+<span class="line" id="L2671">    <span class="tok-comment">// Expect the first preopen to be current working directory.</span>
 </span>
-<span class="line" id="L2668">            <span class="tok-kw">return</span> .{ .fd = <span class="tok-number">3</span> };</span>
-<span class="line" id="L2669">        }</span>
-<span class="line" id="L2670">    } <span class="tok-kw">else</span> {</span>
-<span class="line" id="L2671">        <span class="tok-kw">return</span> Dir{ .fd = os.AT.FDCWD };</span>
-<span class="line" id="L2672">    }</span>
+<span class="line" id="L2672">    <span class="tok-kw">return</span> .{ .fd = <span class="tok-number">3</span> };</span>
 <span class="line" id="L2673">}</span>
 <span class="line" id="L2674"></span>
 <span class="line" id="L2675"><span class="tok-comment">/// Opens a directory at the given path. The directory is a system resource that remains</span></span>
@@ -3248,7 +3248,7 @@
 <span class="line" id="L2969">            <span class="tok-kw">try</span> os.sysctl(&amp;mib, out_buffer.ptr, &amp;out_len, <span class="tok-null">null</span>, <span class="tok-number">0</span>);</span>
 <span class="line" id="L2970">            <span class="tok-comment">// TODO could this slice from 0 to out_len instead?</span>
 </span>
-<span class="line" id="L2971">            <span class="tok-kw">return</span> mem.sliceTo(std.meta.assumeSentinel(out_buffer.ptr, <span class="tok-number">0</span>), <span class="tok-number">0</span>);</span>
+<span class="line" id="L2971">            <span class="tok-kw">return</span> mem.sliceTo(out_buffer, <span class="tok-number">0</span>);</span>
 <span class="line" id="L2972">        },</span>
 <span class="line" id="L2973">        .netbsd =&gt; {</span>
 <span class="line" id="L2974">            <span class="tok-kw">var</span> mib = [<span class="tok-number">4</span>]<span class="tok-type">c_int</span>{ os.CTL.KERN, os.KERN.PROC_ARGS, -<span class="tok-number">1</span>, os.KERN.PROC_PATHNAME };</span>
@@ -3256,7 +3256,7 @@
 <span class="line" id="L2976">            <span class="tok-kw">try</span> os.sysctl(&amp;mib, out_buffer.ptr, &amp;out_len, <span class="tok-null">null</span>, <span class="tok-number">0</span>);</span>
 <span class="line" id="L2977">            <span class="tok-comment">// TODO could this slice from 0 to out_len instead?</span>
 </span>
-<span class="line" id="L2978">            <span class="tok-kw">return</span> mem.sliceTo(std.meta.assumeSentinel(out_buffer.ptr, <span class="tok-number">0</span>), <span class="tok-number">0</span>);</span>
+<span class="line" id="L2978">            <span class="tok-kw">return</span> mem.sliceTo(out_buffer, <span class="tok-number">0</span>);</span>
 <span class="line" id="L2979">        },</span>
 <span class="line" id="L2980">        .openbsd, .haiku =&gt; {</span>
 <span class="line" id="L2981">            <span class="tok-comment">// OpenBSD doesn't support getting the path of a running process, so try to guess it</span>
@@ -3314,7 +3314,7 @@
 <span class="line" id="L3028"><span class="tok-comment">/// The result is UTF16LE-encoded.</span></span>
 <span class="line" id="L3029"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">selfExePathW</span>() [:<span class="tok-number">0</span>]<span class="tok-kw">const</span> <span class="tok-type">u16</span> {</span>
 <span class="line" id="L3030">    <span class="tok-kw">const</span> image_path_name = &amp;os.windows.peb().ProcessParameters.ImagePathName;</span>
-<span class="line" id="L3031">    <span class="tok-kw">return</span> mem.sliceTo(std.meta.assumeSentinel(image_path_name.Buffer, <span class="tok-number">0</span>), <span class="tok-number">0</span>);</span>
+<span class="line" id="L3031">    <span class="tok-kw">return</span> image_path_name.Buffer[<span class="tok-number">0</span> .. image_path_name.Length / <span class="tok-number">2</span> :<span class="tok-number">0</span>];</span>
 <span class="line" id="L3032">}</span>
 <span class="line" id="L3033"></span>
 <span class="line" id="L3034"><span class="tok-comment">/// `selfExeDirPath` except allocates the result on the heap.</span></span>

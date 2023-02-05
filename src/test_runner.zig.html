@@ -115,170 +115,173 @@
 <span class="line" id="L2"><span class="tok-kw">const</span> io = std.io;</span>
 <span class="line" id="L3"><span class="tok-kw">const</span> builtin = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;builtin&quot;</span>);</span>
 <span class="line" id="L4"></span>
-<span class="line" id="L5"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> io_mode: io.Mode = builtin.test_io_mode;</span>
-<span class="line" id="L6"></span>
-<span class="line" id="L7"><span class="tok-kw">var</span> log_err_count: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
-<span class="line" id="L8"></span>
-<span class="line" id="L9"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() <span class="tok-type">void</span> {</span>
-<span class="line" id="L10">    <span class="tok-kw">if</span> (builtin.zig_backend != .stage1 <span class="tok-kw">and</span></span>
-<span class="line" id="L11">        (builtin.zig_backend != .stage2_llvm <span class="tok-kw">or</span> builtin.cpu.arch == .wasm32) <span class="tok-kw">and</span></span>
-<span class="line" id="L12">        builtin.zig_backend != .stage2_c)</span>
-<span class="line" id="L13">    {</span>
-<span class="line" id="L14">        <span class="tok-kw">return</span> main2() <span class="tok-kw">catch</span> <span class="tok-builtin">@panic</span>(<span class="tok-str">&quot;test failure&quot;</span>);</span>
-<span class="line" id="L15">    }</span>
-<span class="line" id="L16">    <span class="tok-kw">const</span> test_fn_list = builtin.test_functions;</span>
-<span class="line" id="L17">    <span class="tok-kw">var</span> ok_count: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
-<span class="line" id="L18">    <span class="tok-kw">var</span> skip_count: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
-<span class="line" id="L19">    <span class="tok-kw">var</span> fail_count: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
-<span class="line" id="L20">    <span class="tok-kw">var</span> progress = std.Progress{</span>
-<span class="line" id="L21">        .dont_print_on_dumb = <span class="tok-null">true</span>,</span>
-<span class="line" id="L22">    };</span>
-<span class="line" id="L23">    <span class="tok-kw">const</span> root_node = progress.start(<span class="tok-str">&quot;Test&quot;</span>, test_fn_list.len);</span>
-<span class="line" id="L24">    <span class="tok-kw">const</span> have_tty = progress.terminal != <span class="tok-null">null</span> <span class="tok-kw">and</span></span>
-<span class="line" id="L25">        (progress.supports_ansi_escape_codes <span class="tok-kw">or</span> progress.is_windows_terminal);</span>
-<span class="line" id="L26"></span>
-<span class="line" id="L27">    <span class="tok-kw">var</span> async_frame_buffer: []<span class="tok-kw">align</span>(std.Target.stack_align) <span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;</span>
-<span class="line" id="L28">    <span class="tok-comment">// TODO this is on the next line (using `undefined` above) because otherwise zig incorrectly</span>
+<span class="line" id="L5"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> std_options = <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L6">    <span class="tok-kw">pub</span> <span class="tok-kw">const</span> io_mode: io.Mode = builtin.test_io_mode;</span>
+<span class="line" id="L7">    <span class="tok-kw">pub</span> <span class="tok-kw">const</span> logFn = log;</span>
+<span class="line" id="L8">};</span>
+<span class="line" id="L9"></span>
+<span class="line" id="L10"><span class="tok-kw">var</span> log_err_count: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L11"></span>
+<span class="line" id="L12"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() <span class="tok-type">void</span> {</span>
+<span class="line" id="L13">    <span class="tok-kw">if</span> (builtin.zig_backend != .stage1 <span class="tok-kw">and</span></span>
+<span class="line" id="L14">        builtin.zig_backend != .stage2_llvm <span class="tok-kw">and</span></span>
+<span class="line" id="L15">        builtin.zig_backend != .stage2_c)</span>
+<span class="line" id="L16">    {</span>
+<span class="line" id="L17">        <span class="tok-kw">return</span> main2() <span class="tok-kw">catch</span> <span class="tok-builtin">@panic</span>(<span class="tok-str">&quot;test failure&quot;</span>);</span>
+<span class="line" id="L18">    }</span>
+<span class="line" id="L19">    <span class="tok-kw">const</span> test_fn_list = builtin.test_functions;</span>
+<span class="line" id="L20">    <span class="tok-kw">var</span> ok_count: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L21">    <span class="tok-kw">var</span> skip_count: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L22">    <span class="tok-kw">var</span> fail_count: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L23">    <span class="tok-kw">var</span> progress = std.Progress{</span>
+<span class="line" id="L24">        .dont_print_on_dumb = <span class="tok-null">true</span>,</span>
+<span class="line" id="L25">    };</span>
+<span class="line" id="L26">    <span class="tok-kw">const</span> root_node = progress.start(<span class="tok-str">&quot;Test&quot;</span>, test_fn_list.len);</span>
+<span class="line" id="L27">    <span class="tok-kw">const</span> have_tty = progress.terminal != <span class="tok-null">null</span> <span class="tok-kw">and</span></span>
+<span class="line" id="L28">        (progress.supports_ansi_escape_codes <span class="tok-kw">or</span> progress.is_windows_terminal);</span>
+<span class="line" id="L29"></span>
+<span class="line" id="L30">    <span class="tok-kw">var</span> async_frame_buffer: []<span class="tok-kw">align</span>(std.Target.stack_align) <span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;</span>
+<span class="line" id="L31">    <span class="tok-comment">// TODO this is on the next line (using `undefined` above) because otherwise zig incorrectly</span>
 </span>
-<span class="line" id="L29">    <span class="tok-comment">// ignores the alignment of the slice.</span>
+<span class="line" id="L32">    <span class="tok-comment">// ignores the alignment of the slice.</span>
 </span>
-<span class="line" id="L30">    async_frame_buffer = &amp;[_]<span class="tok-type">u8</span>{};</span>
-<span class="line" id="L31"></span>
-<span class="line" id="L32">    <span class="tok-kw">var</span> leaks: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
-<span class="line" id="L33">    <span class="tok-kw">for</span> (test_fn_list) |test_fn, i| {</span>
-<span class="line" id="L34">        std.testing.allocator_instance = .{};</span>
-<span class="line" id="L35">        <span class="tok-kw">defer</span> {</span>
-<span class="line" id="L36">            <span class="tok-kw">if</span> (std.testing.allocator_instance.deinit()) {</span>
-<span class="line" id="L37">                leaks += <span class="tok-number">1</span>;</span>
-<span class="line" id="L38">            }</span>
-<span class="line" id="L39">        }</span>
-<span class="line" id="L40">        std.testing.log_level = .warn;</span>
-<span class="line" id="L41"></span>
-<span class="line" id="L42">        <span class="tok-kw">var</span> test_node = root_node.start(test_fn.name, <span class="tok-number">0</span>);</span>
-<span class="line" id="L43">        test_node.activate();</span>
-<span class="line" id="L44">        progress.refresh();</span>
-<span class="line" id="L45">        <span class="tok-kw">if</span> (!have_tty) {</span>
-<span class="line" id="L46">            std.debug.print(<span class="tok-str">&quot;{d}/{d} {s}... &quot;</span>, .{ i + <span class="tok-number">1</span>, test_fn_list.len, test_fn.name });</span>
-<span class="line" id="L47">        }</span>
-<span class="line" id="L48">        <span class="tok-kw">const</span> result = <span class="tok-kw">if</span> (test_fn.async_frame_size) |size| <span class="tok-kw">switch</span> (io_mode) {</span>
-<span class="line" id="L49">            .evented =&gt; blk: {</span>
-<span class="line" id="L50">                <span class="tok-kw">if</span> (async_frame_buffer.len &lt; size) {</span>
-<span class="line" id="L51">                    std.heap.page_allocator.free(async_frame_buffer);</span>
-<span class="line" id="L52">                    async_frame_buffer = std.heap.page_allocator.alignedAlloc(<span class="tok-type">u8</span>, std.Target.stack_align, size) <span class="tok-kw">catch</span> <span class="tok-builtin">@panic</span>(<span class="tok-str">&quot;out of memory&quot;</span>);</span>
-<span class="line" id="L53">                }</span>
-<span class="line" id="L54">                <span class="tok-kw">const</span> casted_fn = <span class="tok-builtin">@ptrCast</span>(<span class="tok-kw">fn</span> () <span class="tok-kw">callconv</span>(.Async) <span class="tok-type">anyerror</span>!<span class="tok-type">void</span>, test_fn.func);</span>
-<span class="line" id="L55">                <span class="tok-kw">break</span> :blk <span class="tok-kw">await</span> <span class="tok-builtin">@asyncCall</span>(async_frame_buffer, {}, casted_fn, .{});</span>
-<span class="line" id="L56">            },</span>
-<span class="line" id="L57">            .blocking =&gt; {</span>
-<span class="line" id="L58">                skip_count += <span class="tok-number">1</span>;</span>
-<span class="line" id="L59">                test_node.end();</span>
-<span class="line" id="L60">                progress.log(<span class="tok-str">&quot;SKIP (async test)\n&quot;</span>, .{});</span>
-<span class="line" id="L61">                <span class="tok-kw">continue</span>;</span>
-<span class="line" id="L62">            },</span>
-<span class="line" id="L63">        } <span class="tok-kw">else</span> test_fn.func();</span>
-<span class="line" id="L64">        <span class="tok-kw">if</span> (result) |_| {</span>
-<span class="line" id="L65">            ok_count += <span class="tok-number">1</span>;</span>
-<span class="line" id="L66">            test_node.end();</span>
-<span class="line" id="L67">            <span class="tok-kw">if</span> (!have_tty) std.debug.print(<span class="tok-str">&quot;OK\n&quot;</span>, .{});</span>
-<span class="line" id="L68">        } <span class="tok-kw">else</span> |err| <span class="tok-kw">switch</span> (err) {</span>
-<span class="line" id="L69">            <span class="tok-kw">error</span>.SkipZigTest =&gt; {</span>
-<span class="line" id="L70">                skip_count += <span class="tok-number">1</span>;</span>
-<span class="line" id="L71">                progress.log(<span class="tok-str">&quot;SKIP\n&quot;</span>, .{});</span>
-<span class="line" id="L72">                test_node.end();</span>
-<span class="line" id="L73">            },</span>
-<span class="line" id="L74">            <span class="tok-kw">else</span> =&gt; {</span>
-<span class="line" id="L75">                fail_count += <span class="tok-number">1</span>;</span>
-<span class="line" id="L76">                progress.log(<span class="tok-str">&quot;FAIL ({s})\n&quot;</span>, .{<span class="tok-builtin">@errorName</span>(err)});</span>
-<span class="line" id="L77">                <span class="tok-kw">if</span> (<span class="tok-builtin">@errorReturnTrace</span>()) |trace| {</span>
-<span class="line" id="L78">                    std.debug.dumpStackTrace(trace.*);</span>
-<span class="line" id="L79">                }</span>
-<span class="line" id="L80">                test_node.end();</span>
-<span class="line" id="L81">            },</span>
-<span class="line" id="L82">        }</span>
-<span class="line" id="L83">    }</span>
-<span class="line" id="L84">    root_node.end();</span>
-<span class="line" id="L85">    <span class="tok-kw">if</span> (ok_count == test_fn_list.len) {</span>
-<span class="line" id="L86">        std.debug.print(<span class="tok-str">&quot;All {d} tests passed.\n&quot;</span>, .{ok_count});</span>
-<span class="line" id="L87">    } <span class="tok-kw">else</span> {</span>
-<span class="line" id="L88">        std.debug.print(<span class="tok-str">&quot;{d} passed; {d} skipped; {d} failed.\n&quot;</span>, .{ ok_count, skip_count, fail_count });</span>
-<span class="line" id="L89">    }</span>
-<span class="line" id="L90">    <span class="tok-kw">if</span> (log_err_count != <span class="tok-number">0</span>) {</span>
-<span class="line" id="L91">        std.debug.print(<span class="tok-str">&quot;{d} errors were logged.\n&quot;</span>, .{log_err_count});</span>
+<span class="line" id="L33">    async_frame_buffer = &amp;[_]<span class="tok-type">u8</span>{};</span>
+<span class="line" id="L34"></span>
+<span class="line" id="L35">    <span class="tok-kw">var</span> leaks: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L36">    <span class="tok-kw">for</span> (test_fn_list) |test_fn, i| {</span>
+<span class="line" id="L37">        std.testing.allocator_instance = .{};</span>
+<span class="line" id="L38">        <span class="tok-kw">defer</span> {</span>
+<span class="line" id="L39">            <span class="tok-kw">if</span> (std.testing.allocator_instance.deinit()) {</span>
+<span class="line" id="L40">                leaks += <span class="tok-number">1</span>;</span>
+<span class="line" id="L41">            }</span>
+<span class="line" id="L42">        }</span>
+<span class="line" id="L43">        std.testing.log_level = .warn;</span>
+<span class="line" id="L44"></span>
+<span class="line" id="L45">        <span class="tok-kw">var</span> test_node = root_node.start(test_fn.name, <span class="tok-number">0</span>);</span>
+<span class="line" id="L46">        test_node.activate();</span>
+<span class="line" id="L47">        progress.refresh();</span>
+<span class="line" id="L48">        <span class="tok-kw">if</span> (!have_tty) {</span>
+<span class="line" id="L49">            std.debug.print(<span class="tok-str">&quot;{d}/{d} {s}... &quot;</span>, .{ i + <span class="tok-number">1</span>, test_fn_list.len, test_fn.name });</span>
+<span class="line" id="L50">        }</span>
+<span class="line" id="L51">        <span class="tok-kw">const</span> result = <span class="tok-kw">if</span> (test_fn.async_frame_size) |size| <span class="tok-kw">switch</span> (std.options.io_mode) {</span>
+<span class="line" id="L52">            .evented =&gt; blk: {</span>
+<span class="line" id="L53">                <span class="tok-kw">if</span> (async_frame_buffer.len &lt; size) {</span>
+<span class="line" id="L54">                    std.heap.page_allocator.free(async_frame_buffer);</span>
+<span class="line" id="L55">                    async_frame_buffer = std.heap.page_allocator.alignedAlloc(<span class="tok-type">u8</span>, std.Target.stack_align, size) <span class="tok-kw">catch</span> <span class="tok-builtin">@panic</span>(<span class="tok-str">&quot;out of memory&quot;</span>);</span>
+<span class="line" id="L56">                }</span>
+<span class="line" id="L57">                <span class="tok-kw">const</span> casted_fn = <span class="tok-builtin">@ptrCast</span>(<span class="tok-kw">fn</span> () <span class="tok-kw">callconv</span>(.Async) <span class="tok-type">anyerror</span>!<span class="tok-type">void</span>, test_fn.func);</span>
+<span class="line" id="L58">                <span class="tok-kw">break</span> :blk <span class="tok-kw">await</span> <span class="tok-builtin">@asyncCall</span>(async_frame_buffer, {}, casted_fn, .{});</span>
+<span class="line" id="L59">            },</span>
+<span class="line" id="L60">            .blocking =&gt; {</span>
+<span class="line" id="L61">                skip_count += <span class="tok-number">1</span>;</span>
+<span class="line" id="L62">                test_node.end();</span>
+<span class="line" id="L63">                progress.log(<span class="tok-str">&quot;SKIP (async test)\n&quot;</span>, .{});</span>
+<span class="line" id="L64">                <span class="tok-kw">continue</span>;</span>
+<span class="line" id="L65">            },</span>
+<span class="line" id="L66">        } <span class="tok-kw">else</span> test_fn.func();</span>
+<span class="line" id="L67">        <span class="tok-kw">if</span> (result) |_| {</span>
+<span class="line" id="L68">            ok_count += <span class="tok-number">1</span>;</span>
+<span class="line" id="L69">            test_node.end();</span>
+<span class="line" id="L70">            <span class="tok-kw">if</span> (!have_tty) std.debug.print(<span class="tok-str">&quot;OK\n&quot;</span>, .{});</span>
+<span class="line" id="L71">        } <span class="tok-kw">else</span> |err| <span class="tok-kw">switch</span> (err) {</span>
+<span class="line" id="L72">            <span class="tok-kw">error</span>.SkipZigTest =&gt; {</span>
+<span class="line" id="L73">                skip_count += <span class="tok-number">1</span>;</span>
+<span class="line" id="L74">                progress.log(<span class="tok-str">&quot;SKIP\n&quot;</span>, .{});</span>
+<span class="line" id="L75">                test_node.end();</span>
+<span class="line" id="L76">            },</span>
+<span class="line" id="L77">            <span class="tok-kw">else</span> =&gt; {</span>
+<span class="line" id="L78">                fail_count += <span class="tok-number">1</span>;</span>
+<span class="line" id="L79">                progress.log(<span class="tok-str">&quot;FAIL ({s})\n&quot;</span>, .{<span class="tok-builtin">@errorName</span>(err)});</span>
+<span class="line" id="L80">                <span class="tok-kw">if</span> (<span class="tok-builtin">@errorReturnTrace</span>()) |trace| {</span>
+<span class="line" id="L81">                    std.debug.dumpStackTrace(trace.*);</span>
+<span class="line" id="L82">                }</span>
+<span class="line" id="L83">                test_node.end();</span>
+<span class="line" id="L84">            },</span>
+<span class="line" id="L85">        }</span>
+<span class="line" id="L86">    }</span>
+<span class="line" id="L87">    root_node.end();</span>
+<span class="line" id="L88">    <span class="tok-kw">if</span> (ok_count == test_fn_list.len) {</span>
+<span class="line" id="L89">        std.debug.print(<span class="tok-str">&quot;All {d} tests passed.\n&quot;</span>, .{ok_count});</span>
+<span class="line" id="L90">    } <span class="tok-kw">else</span> {</span>
+<span class="line" id="L91">        std.debug.print(<span class="tok-str">&quot;{d} passed; {d} skipped; {d} failed.\n&quot;</span>, .{ ok_count, skip_count, fail_count });</span>
 <span class="line" id="L92">    }</span>
-<span class="line" id="L93">    <span class="tok-kw">if</span> (leaks != <span class="tok-number">0</span>) {</span>
-<span class="line" id="L94">        std.debug.print(<span class="tok-str">&quot;{d} tests leaked memory.\n&quot;</span>, .{leaks});</span>
+<span class="line" id="L93">    <span class="tok-kw">if</span> (log_err_count != <span class="tok-number">0</span>) {</span>
+<span class="line" id="L94">        std.debug.print(<span class="tok-str">&quot;{d} errors were logged.\n&quot;</span>, .{log_err_count});</span>
 <span class="line" id="L95">    }</span>
-<span class="line" id="L96">    <span class="tok-kw">if</span> (leaks != <span class="tok-number">0</span> <span class="tok-kw">or</span> log_err_count != <span class="tok-number">0</span> <span class="tok-kw">or</span> fail_count != <span class="tok-number">0</span>) {</span>
-<span class="line" id="L97">        std.process.exit(<span class="tok-number">1</span>);</span>
+<span class="line" id="L96">    <span class="tok-kw">if</span> (leaks != <span class="tok-number">0</span>) {</span>
+<span class="line" id="L97">        std.debug.print(<span class="tok-str">&quot;{d} tests leaked memory.\n&quot;</span>, .{leaks});</span>
 <span class="line" id="L98">    }</span>
-<span class="line" id="L99">}</span>
-<span class="line" id="L100"></span>
-<span class="line" id="L101"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">log</span>(</span>
-<span class="line" id="L102">    <span class="tok-kw">comptime</span> message_level: std.log.Level,</span>
-<span class="line" id="L103">    <span class="tok-kw">comptime</span> scope: <span class="tok-builtin">@Type</span>(.EnumLiteral),</span>
-<span class="line" id="L104">    <span class="tok-kw">comptime</span> format: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
-<span class="line" id="L105">    args: <span class="tok-kw">anytype</span>,</span>
-<span class="line" id="L106">) <span class="tok-type">void</span> {</span>
-<span class="line" id="L107">    <span class="tok-kw">if</span> (<span class="tok-builtin">@enumToInt</span>(message_level) &lt;= <span class="tok-builtin">@enumToInt</span>(std.log.Level.err)) {</span>
-<span class="line" id="L108">        log_err_count += <span class="tok-number">1</span>;</span>
-<span class="line" id="L109">    }</span>
-<span class="line" id="L110">    <span class="tok-kw">if</span> (<span class="tok-builtin">@enumToInt</span>(message_level) &lt;= <span class="tok-builtin">@enumToInt</span>(std.testing.log_level)) {</span>
-<span class="line" id="L111">        std.debug.print(</span>
-<span class="line" id="L112">            <span class="tok-str">&quot;[&quot;</span> ++ <span class="tok-builtin">@tagName</span>(scope) ++ <span class="tok-str">&quot;] (&quot;</span> ++ <span class="tok-builtin">@tagName</span>(message_level) ++ <span class="tok-str">&quot;): &quot;</span> ++ format ++ <span class="tok-str">&quot;\n&quot;</span>,</span>
-<span class="line" id="L113">            args,</span>
-<span class="line" id="L114">        );</span>
-<span class="line" id="L115">    }</span>
-<span class="line" id="L116">}</span>
-<span class="line" id="L117"></span>
-<span class="line" id="L118"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">main2</span>() <span class="tok-type">anyerror</span>!<span class="tok-type">void</span> {</span>
-<span class="line" id="L119">    <span class="tok-kw">var</span> skipped: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
-<span class="line" id="L120">    <span class="tok-kw">var</span> failed: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
-<span class="line" id="L121">    <span class="tok-comment">// Simpler main(), exercising fewer language features, so that stage2 can handle it.</span>
+<span class="line" id="L99">    <span class="tok-kw">if</span> (leaks != <span class="tok-number">0</span> <span class="tok-kw">or</span> log_err_count != <span class="tok-number">0</span> <span class="tok-kw">or</span> fail_count != <span class="tok-number">0</span>) {</span>
+<span class="line" id="L100">        std.process.exit(<span class="tok-number">1</span>);</span>
+<span class="line" id="L101">    }</span>
+<span class="line" id="L102">}</span>
+<span class="line" id="L103"></span>
+<span class="line" id="L104"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">log</span>(</span>
+<span class="line" id="L105">    <span class="tok-kw">comptime</span> message_level: std.log.Level,</span>
+<span class="line" id="L106">    <span class="tok-kw">comptime</span> scope: <span class="tok-builtin">@Type</span>(.EnumLiteral),</span>
+<span class="line" id="L107">    <span class="tok-kw">comptime</span> format: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
+<span class="line" id="L108">    args: <span class="tok-kw">anytype</span>,</span>
+<span class="line" id="L109">) <span class="tok-type">void</span> {</span>
+<span class="line" id="L110">    <span class="tok-kw">if</span> (<span class="tok-builtin">@enumToInt</span>(message_level) &lt;= <span class="tok-builtin">@enumToInt</span>(std.log.Level.err)) {</span>
+<span class="line" id="L111">        log_err_count += <span class="tok-number">1</span>;</span>
+<span class="line" id="L112">    }</span>
+<span class="line" id="L113">    <span class="tok-kw">if</span> (<span class="tok-builtin">@enumToInt</span>(message_level) &lt;= <span class="tok-builtin">@enumToInt</span>(std.testing.log_level)) {</span>
+<span class="line" id="L114">        std.debug.print(</span>
+<span class="line" id="L115">            <span class="tok-str">&quot;[&quot;</span> ++ <span class="tok-builtin">@tagName</span>(scope) ++ <span class="tok-str">&quot;] (&quot;</span> ++ <span class="tok-builtin">@tagName</span>(message_level) ++ <span class="tok-str">&quot;): &quot;</span> ++ format ++ <span class="tok-str">&quot;\n&quot;</span>,</span>
+<span class="line" id="L116">            args,</span>
+<span class="line" id="L117">        );</span>
+<span class="line" id="L118">    }</span>
+<span class="line" id="L119">}</span>
+<span class="line" id="L120"></span>
+<span class="line" id="L121"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">main2</span>() <span class="tok-type">anyerror</span>!<span class="tok-type">void</span> {</span>
+<span class="line" id="L122">    <span class="tok-kw">var</span> skipped: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L123">    <span class="tok-kw">var</span> failed: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L124">    <span class="tok-comment">// Simpler main(), exercising fewer language features, so that stage2 can handle it.</span>
 </span>
-<span class="line" id="L122">    <span class="tok-kw">for</span> (builtin.test_functions) |test_fn| {</span>
-<span class="line" id="L123">        test_fn.func() <span class="tok-kw">catch</span> |err| {</span>
-<span class="line" id="L124">            <span class="tok-kw">if</span> (err != <span class="tok-kw">error</span>.SkipZigTest) {</span>
-<span class="line" id="L125">                failed += <span class="tok-number">1</span>;</span>
-<span class="line" id="L126">            } <span class="tok-kw">else</span> {</span>
-<span class="line" id="L127">                skipped += <span class="tok-number">1</span>;</span>
-<span class="line" id="L128">            }</span>
-<span class="line" id="L129">        };</span>
-<span class="line" id="L130">    }</span>
-<span class="line" id="L131">    <span class="tok-kw">if</span> (builtin.zig_backend == .stage2_wasm <span class="tok-kw">or</span></span>
-<span class="line" id="L132">        builtin.zig_backend == .stage2_x86_64 <span class="tok-kw">or</span></span>
-<span class="line" id="L133">        builtin.zig_backend == .stage2_aarch64 <span class="tok-kw">or</span></span>
-<span class="line" id="L134">        builtin.zig_backend == .stage2_llvm <span class="tok-kw">or</span></span>
-<span class="line" id="L135">        builtin.zig_backend == .stage2_c)</span>
-<span class="line" id="L136">    {</span>
-<span class="line" id="L137">        <span class="tok-kw">const</span> passed = builtin.test_functions.len - skipped - failed;</span>
-<span class="line" id="L138">        <span class="tok-kw">const</span> stderr = std.io.getStdErr();</span>
-<span class="line" id="L139">        writeInt(stderr, passed) <span class="tok-kw">catch</span> {};</span>
-<span class="line" id="L140">        stderr.writeAll(<span class="tok-str">&quot; passed; &quot;</span>) <span class="tok-kw">catch</span> {};</span>
-<span class="line" id="L141">        writeInt(stderr, skipped) <span class="tok-kw">catch</span> {};</span>
-<span class="line" id="L142">        stderr.writeAll(<span class="tok-str">&quot; skipped; &quot;</span>) <span class="tok-kw">catch</span> {};</span>
-<span class="line" id="L143">        writeInt(stderr, failed) <span class="tok-kw">catch</span> {};</span>
-<span class="line" id="L144">        stderr.writeAll(<span class="tok-str">&quot; failed.\n&quot;</span>) <span class="tok-kw">catch</span> {};</span>
-<span class="line" id="L145">    }</span>
-<span class="line" id="L146">    <span class="tok-kw">if</span> (failed != <span class="tok-number">0</span>) {</span>
-<span class="line" id="L147">        <span class="tok-kw">return</span> <span class="tok-kw">error</span>.TestsFailed;</span>
+<span class="line" id="L125">    <span class="tok-kw">for</span> (builtin.test_functions) |test_fn| {</span>
+<span class="line" id="L126">        test_fn.func() <span class="tok-kw">catch</span> |err| {</span>
+<span class="line" id="L127">            <span class="tok-kw">if</span> (err != <span class="tok-kw">error</span>.SkipZigTest) {</span>
+<span class="line" id="L128">                failed += <span class="tok-number">1</span>;</span>
+<span class="line" id="L129">            } <span class="tok-kw">else</span> {</span>
+<span class="line" id="L130">                skipped += <span class="tok-number">1</span>;</span>
+<span class="line" id="L131">            }</span>
+<span class="line" id="L132">        };</span>
+<span class="line" id="L133">    }</span>
+<span class="line" id="L134">    <span class="tok-kw">if</span> (builtin.zig_backend == .stage2_wasm <span class="tok-kw">or</span></span>
+<span class="line" id="L135">        builtin.zig_backend == .stage2_x86_64 <span class="tok-kw">or</span></span>
+<span class="line" id="L136">        builtin.zig_backend == .stage2_aarch64 <span class="tok-kw">or</span></span>
+<span class="line" id="L137">        builtin.zig_backend == .stage2_llvm <span class="tok-kw">or</span></span>
+<span class="line" id="L138">        builtin.zig_backend == .stage2_c)</span>
+<span class="line" id="L139">    {</span>
+<span class="line" id="L140">        <span class="tok-kw">const</span> passed = builtin.test_functions.len - skipped - failed;</span>
+<span class="line" id="L141">        <span class="tok-kw">const</span> stderr = std.io.getStdErr();</span>
+<span class="line" id="L142">        writeInt(stderr, passed) <span class="tok-kw">catch</span> {};</span>
+<span class="line" id="L143">        stderr.writeAll(<span class="tok-str">&quot; passed; &quot;</span>) <span class="tok-kw">catch</span> {};</span>
+<span class="line" id="L144">        writeInt(stderr, skipped) <span class="tok-kw">catch</span> {};</span>
+<span class="line" id="L145">        stderr.writeAll(<span class="tok-str">&quot; skipped; &quot;</span>) <span class="tok-kw">catch</span> {};</span>
+<span class="line" id="L146">        writeInt(stderr, failed) <span class="tok-kw">catch</span> {};</span>
+<span class="line" id="L147">        stderr.writeAll(<span class="tok-str">&quot; failed.\n&quot;</span>) <span class="tok-kw">catch</span> {};</span>
 <span class="line" id="L148">    }</span>
-<span class="line" id="L149">}</span>
-<span class="line" id="L150"></span>
-<span class="line" id="L151"><span class="tok-kw">fn</span> <span class="tok-fn">writeInt</span>(stderr: std.fs.File, int: <span class="tok-type">usize</span>) <span class="tok-type">anyerror</span>!<span class="tok-type">void</span> {</span>
-<span class="line" id="L152">    <span class="tok-kw">const</span> base = <span class="tok-number">10</span>;</span>
-<span class="line" id="L153">    <span class="tok-kw">var</span> buf: [<span class="tok-number">100</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;</span>
-<span class="line" id="L154">    <span class="tok-kw">var</span> a: <span class="tok-type">usize</span> = int;</span>
-<span class="line" id="L155">    <span class="tok-kw">var</span> index: <span class="tok-type">usize</span> = buf.len;</span>
-<span class="line" id="L156">    <span class="tok-kw">while</span> (<span class="tok-null">true</span>) {</span>
-<span class="line" id="L157">        <span class="tok-kw">const</span> digit = a % base;</span>
-<span class="line" id="L158">        index -= <span class="tok-number">1</span>;</span>
-<span class="line" id="L159">        buf[index] = std.fmt.digitToChar(<span class="tok-builtin">@intCast</span>(<span class="tok-type">u8</span>, digit), .lower);</span>
-<span class="line" id="L160">        a /= base;</span>
-<span class="line" id="L161">        <span class="tok-kw">if</span> (a == <span class="tok-number">0</span>) <span class="tok-kw">break</span>;</span>
-<span class="line" id="L162">    }</span>
-<span class="line" id="L163">    <span class="tok-kw">const</span> slice = buf[index..];</span>
-<span class="line" id="L164">    <span class="tok-kw">try</span> stderr.writeAll(slice);</span>
-<span class="line" id="L165">}</span>
-<span class="line" id="L166"></span>
+<span class="line" id="L149">    <span class="tok-kw">if</span> (failed != <span class="tok-number">0</span>) {</span>
+<span class="line" id="L150">        <span class="tok-kw">return</span> <span class="tok-kw">error</span>.TestsFailed;</span>
+<span class="line" id="L151">    }</span>
+<span class="line" id="L152">}</span>
+<span class="line" id="L153"></span>
+<span class="line" id="L154"><span class="tok-kw">fn</span> <span class="tok-fn">writeInt</span>(stderr: std.fs.File, int: <span class="tok-type">usize</span>) <span class="tok-type">anyerror</span>!<span class="tok-type">void</span> {</span>
+<span class="line" id="L155">    <span class="tok-kw">const</span> base = <span class="tok-number">10</span>;</span>
+<span class="line" id="L156">    <span class="tok-kw">var</span> buf: [<span class="tok-number">100</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;</span>
+<span class="line" id="L157">    <span class="tok-kw">var</span> a: <span class="tok-type">usize</span> = int;</span>
+<span class="line" id="L158">    <span class="tok-kw">var</span> index: <span class="tok-type">usize</span> = buf.len;</span>
+<span class="line" id="L159">    <span class="tok-kw">while</span> (<span class="tok-null">true</span>) {</span>
+<span class="line" id="L160">        <span class="tok-kw">const</span> digit = a % base;</span>
+<span class="line" id="L161">        index -= <span class="tok-number">1</span>;</span>
+<span class="line" id="L162">        buf[index] = std.fmt.digitToChar(<span class="tok-builtin">@intCast</span>(<span class="tok-type">u8</span>, digit), .lower);</span>
+<span class="line" id="L163">        a /= base;</span>
+<span class="line" id="L164">        <span class="tok-kw">if</span> (a == <span class="tok-number">0</span>) <span class="tok-kw">break</span>;</span>
+<span class="line" id="L165">    }</span>
+<span class="line" id="L166">    <span class="tok-kw">const</span> slice = buf[index..];</span>
+<span class="line" id="L167">    <span class="tok-kw">try</span> stderr.writeAll(slice);</span>
+<span class="line" id="L168">}</span>
+<span class="line" id="L169"></span>
 </code></pre></body>
 </html>

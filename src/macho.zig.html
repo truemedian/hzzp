@@ -2305,100 +2305,62 @@
 <span class="line" id="L2004">    encodingIndex: <span class="tok-type">u8</span>,</span>
 <span class="line" id="L2005">};</span>
 <span class="line" id="L2006"></span>
-<span class="line" id="L2007"><span class="tok-comment">// TODO add corresponding x86_64 tagged union</span>
+<span class="line" id="L2007"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_IS_NOT_FUNCTION_START: <span class="tok-type">u32</span> = <span class="tok-number">0x80000000</span>;</span>
+<span class="line" id="L2008"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_HAS_LSDA: <span class="tok-type">u32</span> = <span class="tok-number">0x40000000</span>;</span>
+<span class="line" id="L2009"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_PERSONALITY_MASK: <span class="tok-type">u32</span> = <span class="tok-number">0x30000000</span>;</span>
+<span class="line" id="L2010"></span>
+<span class="line" id="L2011"><span class="tok-comment">// x86_64</span>
 </span>
-<span class="line" id="L2008"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UnwindEncodingArm64 = <span class="tok-kw">union</span>(<span class="tok-kw">enum</span>) {</span>
-<span class="line" id="L2009">    frame: Frame,</span>
-<span class="line" id="L2010">    frameless: Frameless,</span>
-<span class="line" id="L2011">    dwarf: Dwarf,</span>
-<span class="line" id="L2012"></span>
-<span class="line" id="L2013">    <span class="tok-kw">pub</span> <span class="tok-kw">const</span> Frame = <span class="tok-kw">packed</span> <span class="tok-kw">struct</span> {</span>
-<span class="line" id="L2014">        x_reg_pairs: <span class="tok-kw">packed</span> <span class="tok-kw">struct</span> {</span>
-<span class="line" id="L2015">            x19_x20: <span class="tok-type">u1</span>,</span>
-<span class="line" id="L2016">            x21_x22: <span class="tok-type">u1</span>,</span>
-<span class="line" id="L2017">            x23_x24: <span class="tok-type">u1</span>,</span>
-<span class="line" id="L2018">            x25_x26: <span class="tok-type">u1</span>,</span>
-<span class="line" id="L2019">            x27_x28: <span class="tok-type">u1</span>,</span>
-<span class="line" id="L2020">        },</span>
-<span class="line" id="L2021">        d_reg_pairs: <span class="tok-kw">packed</span> <span class="tok-kw">struct</span> {</span>
-<span class="line" id="L2022">            d8_d9: <span class="tok-type">u1</span>,</span>
-<span class="line" id="L2023">            d10_d11: <span class="tok-type">u1</span>,</span>
-<span class="line" id="L2024">            d12_d13: <span class="tok-type">u1</span>,</span>
-<span class="line" id="L2025">            d14_d15: <span class="tok-type">u1</span>,</span>
-<span class="line" id="L2026">        },</span>
-<span class="line" id="L2027">        unused: <span class="tok-type">u15</span>,</span>
-<span class="line" id="L2028">        mode: Mode = .frame,</span>
-<span class="line" id="L2029">        personality_index: <span class="tok-type">u2</span>,</span>
-<span class="line" id="L2030">        has_lsda: <span class="tok-type">u1</span>,</span>
-<span class="line" id="L2031">        start: <span class="tok-type">u1</span>,</span>
-<span class="line" id="L2032">    };</span>
-<span class="line" id="L2033"></span>
-<span class="line" id="L2034">    <span class="tok-kw">pub</span> <span class="tok-kw">const</span> Frameless = <span class="tok-kw">packed</span> <span class="tok-kw">struct</span> {</span>
-<span class="line" id="L2035">        unused: <span class="tok-type">u12</span> = <span class="tok-number">0</span>,</span>
-<span class="line" id="L2036">        stack_size: <span class="tok-type">u12</span>,</span>
-<span class="line" id="L2037">        mode: Mode = .frameless,</span>
-<span class="line" id="L2038">        personality_index: <span class="tok-type">u2</span>,</span>
-<span class="line" id="L2039">        has_lsda: <span class="tok-type">u1</span>,</span>
-<span class="line" id="L2040">        start: <span class="tok-type">u1</span>,</span>
-<span class="line" id="L2041">    };</span>
-<span class="line" id="L2042"></span>
-<span class="line" id="L2043">    <span class="tok-kw">pub</span> <span class="tok-kw">const</span> Dwarf = <span class="tok-kw">packed</span> <span class="tok-kw">struct</span> {</span>
-<span class="line" id="L2044">        section_offset: <span class="tok-type">u24</span>,</span>
-<span class="line" id="L2045">        mode: Mode = .dwarf,</span>
-<span class="line" id="L2046">        personality_index: <span class="tok-type">u2</span>,</span>
-<span class="line" id="L2047">        has_lsda: <span class="tok-type">u1</span>,</span>
-<span class="line" id="L2048">        start: <span class="tok-type">u1</span>,</span>
-<span class="line" id="L2049">    };</span>
-<span class="line" id="L2050"></span>
-<span class="line" id="L2051">    <span class="tok-kw">pub</span> <span class="tok-kw">const</span> Mode = <span class="tok-kw">enum</span>(<span class="tok-type">u4</span>) {</span>
-<span class="line" id="L2052">        frameless = <span class="tok-number">0x2</span>,</span>
-<span class="line" id="L2053">        dwarf = <span class="tok-number">0x3</span>,</span>
-<span class="line" id="L2054">        frame = <span class="tok-number">0x4</span>,</span>
-<span class="line" id="L2055">        _,</span>
-<span class="line" id="L2056">    };</span>
-<span class="line" id="L2057"></span>
-<span class="line" id="L2058">    <span class="tok-kw">pub</span> <span class="tok-kw">const</span> mode_mask: <span class="tok-type">u32</span> = <span class="tok-number">0x0F000000</span>;</span>
-<span class="line" id="L2059"></span>
-<span class="line" id="L2060">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">fromU32</span>(enc: <span class="tok-type">u32</span>) !UnwindEncodingArm64 {</span>
-<span class="line" id="L2061">        <span class="tok-kw">const</span> m = (enc &amp; mode_mask) &gt;&gt; <span class="tok-number">24</span>;</span>
-<span class="line" id="L2062">        <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (<span class="tok-builtin">@intToEnum</span>(Mode, m)) {</span>
-<span class="line" id="L2063">            .frame =&gt; .{ .frame = <span class="tok-builtin">@bitCast</span>(Frame, enc) },</span>
-<span class="line" id="L2064">            .frameless =&gt; .{ .frameless = <span class="tok-builtin">@bitCast</span>(Frameless, enc) },</span>
-<span class="line" id="L2065">            .dwarf =&gt; .{ .dwarf = <span class="tok-builtin">@bitCast</span>(Dwarf, enc) },</span>
-<span class="line" id="L2066">            <span class="tok-kw">else</span> =&gt; <span class="tok-kw">return</span> <span class="tok-kw">error</span>.UnknownEncoding,</span>
-<span class="line" id="L2067">        };</span>
-<span class="line" id="L2068">    }</span>
-<span class="line" id="L2069"></span>
-<span class="line" id="L2070">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">toU32</span>(enc: UnwindEncodingArm64) <span class="tok-type">u32</span> {</span>
-<span class="line" id="L2071">        <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (enc) {</span>
-<span class="line" id="L2072">            <span class="tok-kw">inline</span> <span class="tok-kw">else</span> =&gt; |x| <span class="tok-builtin">@bitCast</span>(<span class="tok-type">u32</span>, x),</span>
-<span class="line" id="L2073">        };</span>
-<span class="line" id="L2074">    }</span>
-<span class="line" id="L2075"></span>
-<span class="line" id="L2076">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">start</span>(enc: UnwindEncodingArm64) <span class="tok-type">bool</span> {</span>
-<span class="line" id="L2077">        <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (enc) {</span>
-<span class="line" id="L2078">            <span class="tok-kw">inline</span> <span class="tok-kw">else</span> =&gt; |x| x.start == <span class="tok-number">0b1</span>,</span>
-<span class="line" id="L2079">        };</span>
-<span class="line" id="L2080">    }</span>
-<span class="line" id="L2081"></span>
-<span class="line" id="L2082">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">hasLsda</span>(enc: UnwindEncodingArm64) <span class="tok-type">bool</span> {</span>
-<span class="line" id="L2083">        <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (enc) {</span>
-<span class="line" id="L2084">            <span class="tok-kw">inline</span> <span class="tok-kw">else</span> =&gt; |x| x.has_lsda == <span class="tok-number">0b1</span>,</span>
-<span class="line" id="L2085">        };</span>
-<span class="line" id="L2086">    }</span>
-<span class="line" id="L2087"></span>
-<span class="line" id="L2088">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">personalityIndex</span>(enc: UnwindEncodingArm64) <span class="tok-type">u2</span> {</span>
-<span class="line" id="L2089">        <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (enc) {</span>
-<span class="line" id="L2090">            <span class="tok-kw">inline</span> <span class="tok-kw">else</span> =&gt; |x| x.personality_index,</span>
-<span class="line" id="L2091">        };</span>
-<span class="line" id="L2092">    }</span>
-<span class="line" id="L2093"></span>
-<span class="line" id="L2094">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">mode</span>(enc: UnwindEncodingArm64) Mode {</span>
-<span class="line" id="L2095">        <span class="tok-kw">return</span> <span class="tok-kw">switch</span> (enc) {</span>
-<span class="line" id="L2096">            <span class="tok-kw">inline</span> <span class="tok-kw">else</span> =&gt; |x| x.mode,</span>
-<span class="line" id="L2097">        };</span>
-<span class="line" id="L2098">    }</span>
-<span class="line" id="L2099">};</span>
-<span class="line" id="L2100"></span>
+<span class="line" id="L2012"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_X86_64_MODE_MASK: <span class="tok-type">u32</span> = <span class="tok-number">0x0F000000</span>;</span>
+<span class="line" id="L2013"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_X86_64_MODE = <span class="tok-kw">enum</span>(<span class="tok-type">u4</span>) {</span>
+<span class="line" id="L2014">    OLD = <span class="tok-number">0</span>,</span>
+<span class="line" id="L2015">    RBP_FRAME = <span class="tok-number">1</span>,</span>
+<span class="line" id="L2016">    STACK_IMMD = <span class="tok-number">2</span>,</span>
+<span class="line" id="L2017">    STACK_IND = <span class="tok-number">3</span>,</span>
+<span class="line" id="L2018">    DWARF = <span class="tok-number">4</span>,</span>
+<span class="line" id="L2019">};</span>
+<span class="line" id="L2020"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_X86_64_RBP_FRAME_REGISTERS: <span class="tok-type">u32</span> = <span class="tok-number">0x00007FFF</span>;</span>
+<span class="line" id="L2021"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_X86_64_RBP_FRAME_OFFSET: <span class="tok-type">u32</span> = <span class="tok-number">0x00FF0000</span>;</span>
+<span class="line" id="L2022"></span>
+<span class="line" id="L2023"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_X86_64_FRAMELESS_STACK_SIZE: <span class="tok-type">u32</span> = <span class="tok-number">0x00FF0000</span>;</span>
+<span class="line" id="L2024"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_X86_64_FRAMELESS_STACK_ADJUST: <span class="tok-type">u32</span> = <span class="tok-number">0x0000E000</span>;</span>
+<span class="line" id="L2025"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_X86_64_FRAMELESS_STACK_REG_COUNT: <span class="tok-type">u32</span> = <span class="tok-number">0x00001C00</span>;</span>
+<span class="line" id="L2026"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_X86_64_FRAMELESS_STACK_REG_PERMUTATION: <span class="tok-type">u32</span> = <span class="tok-number">0x000003FF</span>;</span>
+<span class="line" id="L2027"></span>
+<span class="line" id="L2028"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_X86_64_DWARF_SECTION_OFFSET: <span class="tok-type">u32</span> = <span class="tok-number">0x00FFFFFF</span>;</span>
+<span class="line" id="L2029"></span>
+<span class="line" id="L2030"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_X86_64_REG = <span class="tok-kw">enum</span>(<span class="tok-type">u3</span>) {</span>
+<span class="line" id="L2031">    NONE = <span class="tok-number">0</span>,</span>
+<span class="line" id="L2032">    RBX = <span class="tok-number">1</span>,</span>
+<span class="line" id="L2033">    R12 = <span class="tok-number">2</span>,</span>
+<span class="line" id="L2034">    R13 = <span class="tok-number">3</span>,</span>
+<span class="line" id="L2035">    R14 = <span class="tok-number">4</span>,</span>
+<span class="line" id="L2036">    R15 = <span class="tok-number">5</span>,</span>
+<span class="line" id="L2037">    RBP = <span class="tok-number">6</span>,</span>
+<span class="line" id="L2038">};</span>
+<span class="line" id="L2039"></span>
+<span class="line" id="L2040"><span class="tok-comment">// arm64</span>
+</span>
+<span class="line" id="L2041"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_ARM64_MODE_MASK: <span class="tok-type">u32</span> = <span class="tok-number">0x0F000000</span>;</span>
+<span class="line" id="L2042"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_ARM64_MODE = <span class="tok-kw">enum</span>(<span class="tok-type">u4</span>) {</span>
+<span class="line" id="L2043">    OLD = <span class="tok-number">0</span>,</span>
+<span class="line" id="L2044">    FRAMELESS = <span class="tok-number">2</span>,</span>
+<span class="line" id="L2045">    DWARF = <span class="tok-number">3</span>,</span>
+<span class="line" id="L2046">    FRAME = <span class="tok-number">4</span>,</span>
+<span class="line" id="L2047">};</span>
+<span class="line" id="L2048"></span>
+<span class="line" id="L2049"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_ARM64_FRAME_X19_X20_PAIR: <span class="tok-type">u32</span> = <span class="tok-number">0x00000001</span>;</span>
+<span class="line" id="L2050"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_ARM64_FRAME_X21_X22_PAIR: <span class="tok-type">u32</span> = <span class="tok-number">0x00000002</span>;</span>
+<span class="line" id="L2051"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_ARM64_FRAME_X23_X24_PAIR: <span class="tok-type">u32</span> = <span class="tok-number">0x00000004</span>;</span>
+<span class="line" id="L2052"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_ARM64_FRAME_X25_X26_PAIR: <span class="tok-type">u32</span> = <span class="tok-number">0x00000008</span>;</span>
+<span class="line" id="L2053"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_ARM64_FRAME_X27_X28_PAIR: <span class="tok-type">u32</span> = <span class="tok-number">0x00000010</span>;</span>
+<span class="line" id="L2054"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_ARM64_FRAME_D8_D9_PAIR: <span class="tok-type">u32</span> = <span class="tok-number">0x00000100</span>;</span>
+<span class="line" id="L2055"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_ARM64_FRAME_D10_D11_PAIR: <span class="tok-type">u32</span> = <span class="tok-number">0x00000200</span>;</span>
+<span class="line" id="L2056"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_ARM64_FRAME_D12_D13_PAIR: <span class="tok-type">u32</span> = <span class="tok-number">0x00000400</span>;</span>
+<span class="line" id="L2057"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_ARM64_FRAME_D14_D15_PAIR: <span class="tok-type">u32</span> = <span class="tok-number">0x00000800</span>;</span>
+<span class="line" id="L2058"></span>
+<span class="line" id="L2059"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_ARM64_FRAMELESS_STACK_SIZE_MASK: <span class="tok-type">u32</span> = <span class="tok-number">0x00FFF000</span>;</span>
+<span class="line" id="L2060"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> UNWIND_ARM64_DWARF_SECTION_OFFSET: <span class="tok-type">u32</span> = <span class="tok-number">0x00FFFFFF</span>;</span>
+<span class="line" id="L2061"></span>
 </code></pre></body>
 </html>

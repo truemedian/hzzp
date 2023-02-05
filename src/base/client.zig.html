@@ -406,7 +406,7 @@
 <span class="line" id="L287">    <span class="tok-kw">try</span> client.writeStatusLine(<span class="tok-str">&quot;GET&quot;</span>, <span class="tok-str">&quot;/&quot;</span>);</span>
 <span class="line" id="L288">    <span class="tok-kw">try</span> client.writeHeaderValue(<span class="tok-str">&quot;Header1&quot;</span>, <span class="tok-str">&quot;value1&quot;</span>);</span>
 <span class="line" id="L289">    <span class="tok-kw">try</span> client.writeHeader(.{ .name = <span class="tok-str">&quot;Header2&quot;</span>, .value = <span class="tok-str">&quot;value2&quot;</span> });</span>
-<span class="line" id="L290">    <span class="tok-kw">try</span> client.writeHeaders(std.mem.span(&amp;headers));</span>
+<span class="line" id="L290">    <span class="tok-kw">try</span> client.writeHeaders(&amp;headers);</span>
 <span class="line" id="L291">    <span class="tok-kw">try</span> client.finishHeaders();</span>
 <span class="line" id="L292">    <span class="tok-kw">try</span> client.writePayload(<span class="tok-str">&quot;payload&quot;</span>);</span>
 <span class="line" id="L293"></span>

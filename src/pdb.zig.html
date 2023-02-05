@@ -806,7 +806,7 @@
 <span class="line" id="L671">                <span class="tok-kw">const</span> name_index = <span class="tok-kw">try</span> reader.readIntLittle(<span class="tok-type">u32</span>);</span>
 <span class="line" id="L672">                <span class="tok-kw">if</span> (name_offset &gt; name_bytes.len)</span>
 <span class="line" id="L673">                    <span class="tok-kw">return</span> <span class="tok-kw">error</span>.InvalidDebugInfo;</span>
-<span class="line" id="L674">                <span class="tok-kw">const</span> name = mem.sliceTo(std.meta.assumeSentinel(name_bytes.ptr + name_offset, <span class="tok-number">0</span>), <span class="tok-number">0</span>);</span>
+<span class="line" id="L674">                <span class="tok-kw">const</span> name = mem.sliceTo(name_bytes[name_offset..], <span class="tok-number">0</span>);</span>
 <span class="line" id="L675">                <span class="tok-kw">if</span> (mem.eql(<span class="tok-type">u8</span>, name, <span class="tok-str">&quot;/names&quot;</span>)) {</span>
 <span class="line" id="L676">                    <span class="tok-kw">break</span> :str_tab_index name_index;</span>
 <span class="line" id="L677">                }</span>
