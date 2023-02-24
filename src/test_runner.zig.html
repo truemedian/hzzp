@@ -148,7 +148,7 @@
 <span class="line" id="L33">    async_frame_buffer = &amp;[_]<span class="tok-type">u8</span>{};</span>
 <span class="line" id="L34"></span>
 <span class="line" id="L35">    <span class="tok-kw">var</span> leaks: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
-<span class="line" id="L36">    <span class="tok-kw">for</span> (test_fn_list) |test_fn, i| {</span>
+<span class="line" id="L36">    <span class="tok-kw">for</span> (test_fn_list, <span class="tok-number">0</span>..) |test_fn, i| {</span>
 <span class="line" id="L37">        std.testing.allocator_instance = .{};</span>
 <span class="line" id="L38">        <span class="tok-kw">defer</span> {</span>
 <span class="line" id="L39">            <span class="tok-kw">if</span> (std.testing.allocator_instance.deinit()) {</span>

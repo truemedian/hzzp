@@ -507,7 +507,7 @@
 <span class="line" id="L384">        <span class="tok-kw">const</span> Self = <span class="tok-builtin">@This</span>();</span>
 <span class="line" id="L385"></span>
 <span class="line" id="L386">        <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">write</span>(self: Self, writer: <span class="tok-kw">anytype</span>) !<span class="tok-type">void</span> {</span>
-<span class="line" id="L387">            <span class="tok-kw">for</span> (self.expected) |value, i| {</span>
+<span class="line" id="L387">            <span class="tok-kw">for</span> (self.expected, <span class="tok-number">0</span>..) |value, i| {</span>
 <span class="line" id="L388">                <span class="tok-kw">var</span> full_index = self.start_index + i;</span>
 <span class="line" id="L389">                <span class="tok-kw">const</span> diff = <span class="tok-kw">if</span> (i &lt; self.actual.len) !std.meta.eql(self.actual[i], value) <span class="tok-kw">else</span> <span class="tok-null">true</span>;</span>
 <span class="line" id="L390">                <span class="tok-kw">if</span> (diff) <span class="tok-kw">try</span> self.ttyconf.setColor(writer, .Red);</span>
@@ -529,7 +529,7 @@
 <span class="line" id="L406">            <span class="tok-comment">// to avoid having to calculate diffs twice per chunk</span>
 </span>
 <span class="line" id="L407">            <span class="tok-kw">var</span> diffs: std.bit_set.IntegerBitSet(<span class="tok-number">16</span>) = .{ .mask = <span class="tok-number">0</span> };</span>
-<span class="line" id="L408">            <span class="tok-kw">for</span> (chunk) |byte, i| {</span>
+<span class="line" id="L408">            <span class="tok-kw">for</span> (chunk, <span class="tok-number">0</span>..) |byte, i| {</span>
 <span class="line" id="L409">                <span class="tok-kw">var</span> absolute_byte_index = (expected_iterator.index - chunk.len) + i;</span>
 <span class="line" id="L410">                <span class="tok-kw">const</span> diff = <span class="tok-kw">if</span> (absolute_byte_index &lt; self.actual.len) self.actual[absolute_byte_index] != byte <span class="tok-kw">else</span> <span class="tok-null">true</span>;</span>
 <span class="line" id="L411">                <span class="tok-kw">if</span> (diff) diffs.set(i);</span>
@@ -542,7 +542,7 @@
 <span class="line" id="L418">                <span class="tok-kw">if</span> (chunk.len &lt; <span class="tok-number">8</span>) missing_columns += <span class="tok-number">1</span>;</span>
 <span class="line" id="L419">                <span class="tok-kw">try</span> writer.writeByteNTimes(<span class="tok-str">' '</span>, missing_columns);</span>
 <span class="line" id="L420">            }</span>
-<span class="line" id="L421">            <span class="tok-kw">for</span> (chunk) |byte, i| {</span>
+<span class="line" id="L421">            <span class="tok-kw">for</span> (chunk, <span class="tok-number">0</span>..) |byte, i| {</span>
 <span class="line" id="L422">                <span class="tok-kw">const</span> byte_to_print = <span class="tok-kw">if</span> (std.ascii.isPrint(byte)) byte <span class="tok-kw">else</span> <span class="tok-str">'.'</span>;</span>
 <span class="line" id="L423">                <span class="tok-kw">try</span> self.writeByteDiff(writer, <span class="tok-str">&quot;{c}&quot;</span>, byte_to_print, diffs.isSet(i));</span>
 <span class="line" id="L424">            }</span>
@@ -1194,7 +1194,7 @@
 <span class="line" id="L1060">    <span class="tok-comment">// the failing allocator in field @&quot;0&quot; before each @call)</span>
 </span>
 <span class="line" id="L1061">    <span class="tok-kw">var</span> args: ArgsTuple = <span class="tok-null">undefined</span>;</span>
-<span class="line" id="L1062">    <span class="tok-kw">inline</span> <span class="tok-kw">for</span> (<span class="tok-builtin">@typeInfo</span>(<span class="tok-builtin">@TypeOf</span>(extra_args)).Struct.fields) |field, i| {</span>
+<span class="line" id="L1062">    <span class="tok-kw">inline</span> <span class="tok-kw">for</span> (<span class="tok-builtin">@typeInfo</span>(<span class="tok-builtin">@TypeOf</span>(extra_args)).Struct.fields, <span class="tok-number">0</span>..) |field, i| {</span>
 <span class="line" id="L1063">        <span class="tok-kw">const</span> arg_i_str = <span class="tok-kw">comptime</span> str: {</span>
 <span class="line" id="L1064">            <span class="tok-kw">var</span> str_buf: [<span class="tok-number">100</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;</span>
 <span class="line" id="L1065">            <span class="tok-kw">const</span> args_i = i + <span class="tok-number">1</span>;</span>

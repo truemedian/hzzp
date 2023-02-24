@@ -190,7 +190,7 @@
 <span class="line" id="L75">        },</span>
 <span class="line" id="L76">        .Array =&gt; {</span>
 <span class="line" id="L77">            <span class="tok-kw">if</span> (a.len != b.len) <span class="tok-kw">return</span> <span class="tok-null">false</span>;</span>
-<span class="line" id="L78">            <span class="tok-kw">for</span> (a) |e, i|</span>
+<span class="line" id="L78">            <span class="tok-kw">for</span> (a, <span class="tok-number">0</span>..) |e, i|</span>
 <span class="line" id="L79">                <span class="tok-kw">if</span> (!reworkedMetaEql(e, b[i])) <span class="tok-kw">return</span> <span class="tok-null">false</span>;</span>
 <span class="line" id="L80">            <span class="tok-kw">return</span> <span class="tok-null">true</span>;</span>
 <span class="line" id="L81">        },</span>
