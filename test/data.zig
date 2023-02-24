@@ -38,7 +38,7 @@ pub fn Benchmark(
         }
 
         fn indexOf(comptime field: []const u8) comptime_int {
-            inline for (datasets) |dataset, i| {
+            inline for (datasets, 0..) |dataset, i| {
                 if (std.mem.eql(u8, dataset, field)) return i;
             }
 
@@ -127,7 +127,7 @@ pub fn Benchmark(
 
             var this_sum: f64 = 0.0;
 
-            for (items) |measurement, i| {
+            for (items, 0..) |measurement, i| {
                 this_sum += sizes[i] / (measurement / 1e9);
             }
 
@@ -140,7 +140,7 @@ pub fn Benchmark(
 
             var sum_sq: f64 = 0.0;
 
-            for (items) |measurement, i| {
+            for (items, 0..) |measurement, i| {
                 const speed = sizes[i] / (measurement / 1e9);
 
                 sum_sq += speed * speed;

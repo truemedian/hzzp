@@ -78,7 +78,7 @@ pub const Headers = struct {
     }
 
     pub fn indexOf(self: Headers, name: []const u8) ?usize {
-        for (self.list.items) |header, index| {
+        for (self.list.items, 0..) |header, index| {
             if (ascii.eqlIgnoreCase(header.name, name)) {
                 return index;
             }

@@ -106,12 +106,12 @@ pub fn RequestParser(comptime Reader: type) type {
                     const http_version_buffer = line_it.next() orelse return error.InvalidStatusLine;
 
                     if (http_version_buffer.len != 8) return error.InvalidStatusLine;
-                    
+
                     // This is cursed, but reading a u64 is faster than comparing a string
                     const version_magic = @ptrCast(*align(1) const u64, http_version_buffer.ptr);
                     const version = switch (version_magic.*) {
-                        @bitCast(u64, @ptrCast(*const [8]u8, "HTTP/1.0").*) => Version{.major = 1, .minor = 0},
-                        @bitCast(u64, @ptrCast(*const [8]u8, "HTTP/1.1").*) => Version{.major = 1, .minor = 1},
+                        @bitCast(u64, @ptrCast(*const [8]u8, "HTTP/1.0").*) => Version{ .major = 1, .minor = 0 },
+                        @bitCast(u64, @ptrCast(*const [8]u8, "HTTP/1.1").*) => Version{ .major = 1, .minor = 1 },
                         else => return error.InvalidStatusLine,
                     };
 

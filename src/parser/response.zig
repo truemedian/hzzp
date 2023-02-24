@@ -103,8 +103,8 @@ pub fn ResponseParser(comptime Reader: type) type {
                     // This is cursed, but reading a u64 is faster than comparing a string
                     const version_magic = @ptrCast(*align(1) const u64, line.ptr);
                     const version = switch (version_magic.*) {
-                        @bitCast(u64, @ptrCast(*const [8]u8, "HTTP/1.0").*) => Version{.major = 1, .minor = 0},
-                        @bitCast(u64, @ptrCast(*const [8]u8, "HTTP/1.1").*) => Version{.major = 1, .minor = 1},
+                        @bitCast(u64, @ptrCast(*const [8]u8, "HTTP/1.0").*) => Version{ .major = 1, .minor = 0 },
+                        @bitCast(u64, @ptrCast(*const [8]u8, "HTTP/1.1").*) => Version{ .major = 1, .minor = 1 },
                         else => return error.InvalidStatusLine,
                     };
 

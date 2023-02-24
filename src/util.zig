@@ -75,7 +75,7 @@ pub fn reworkedMetaEql(a: anytype, b: @TypeOf(a)) bool {
         },
         .Array => {
             if (a.len != b.len) return false;
-            for (a) |e, i|
+            for (a, 0..) |e, i|
                 if (!reworkedMetaEql(e, b[i])) return false;
             return true;
         },
