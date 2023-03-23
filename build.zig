@@ -5,9 +5,10 @@ pub fn build(b: *std.Build) void {
         .root_source_file = .{ .path = "src/main.zig" },
         .optimize = b.standardOptimizeOption(.{}),
     });
+    const run_tests = b.addRunArtifact(lib_tests);
 
     const tests = b.step("test", "Run all library tests");
-    tests.dependOn(&lib_tests.step);
+    tests.dependOn(&run_tests.step);
 
     const docs = b.option(bool, "emit_docs", "Build library documentation") orelse false;
 
