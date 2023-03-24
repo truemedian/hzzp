@@ -19,7 +19,7 @@ jobs:
           version: master
 
       - name: Test
-        run: zig build test -Demit_docs
+        run: zig build test -Demit-docs
 
       - name: Publish
         if: success()
