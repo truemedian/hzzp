@@ -25,11 +25,6 @@ pub const Headers = struct {
     }
 
     pub fn deinit(self: *Headers) void {
-        for (self.list.items) |header| {
-            self.allocator.free(header.name);
-            self.allocator.free(header.value);
-        }
-
         self.list.deinit();
     }
 
@@ -38,20 +33,17 @@ pub const Headers = struct {
     }
 
     pub fn appendValue(self: *Headers, name: []const u8, value: []const u8) !void {
-        const duped_name = try self.allocator.dupe(u8, name);
-        const duped_value = try self.allocator.dupe(u8, value);
-
-        try self.list.append(.{
-            .name = duped_name,
-            .value = duped_value,
+        try self.append(.{
+            .name = name,
+            .value = value,
         });
     }
 
-    pub inline fn append(self: *Headers, header: Header) !void {
-        return self.appendValue(header.name, header.value);
+    pub fn append(self: *Headers, header: Header) !void {
+        return self.list.append(header.name, header.value);
     }
 
-    pub inline fn appendSlice(self: *Headers, headers: HeadersSlice) !void {
+    pub fn appendSlice(self: *Headers, headers: HeadersSlice) !void {
         for (headers) |header| {
             try self.appendValue(header.name, header.value);
         }
