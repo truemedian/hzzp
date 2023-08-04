@@ -98,11 +98,11 @@ pub const StatusCode = enum(u10) {
     _,
 
     pub fn code(self: StatusCode) std.meta.Tag(StatusCode) {
-        return @enumToInt(self);
+        return @intFromEnum(self);
     }
 
     pub fn isValid(self: StatusCode) bool {
-        return @enumToInt(self) >= 100 and @enumToInt(self) < 600;
+        return @intFromEnum(self) >= 100 and @intFromEnum(self) < 600;
     }
 
     pub const Group = enum { info, success, redirect, client_error, server_error, invalid };

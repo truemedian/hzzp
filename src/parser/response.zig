@@ -8,7 +8,7 @@ const math = std.math;
 const fmt = std.fmt;
 const mem = std.mem;
 
-const Version = std.builtin.Version;
+const Version = std.SemanticVersion;
 const assert = std.debug.assert;
 
 pub const StatusEvent = struct {
@@ -101,10 +101,10 @@ pub fn ResponseParser(comptime Reader: type) type {
                     if (line.len < 13) return error.InvalidStatusLine;
 
                     // This is cursed, but reading a u64 is faster than comparing a string
-                    const version_magic = @ptrCast(*align(1) const u64, line.ptr);
+                    const version_magic: *align(1) const u64 = @ptrCast(line.ptr);
                     const version = switch (version_magic.*) {
-                        @bitCast(u64, @ptrCast(*const [8]u8, "HTTP/1.0").*) => Version{ .major = 1, .minor = 0 },
-                        @bitCast(u64, @ptrCast(*const [8]u8, "HTTP/1.1").*) => Version{ .major = 1, .minor = 1 },
+                        @as(u64, @bitCast(@as([8]u8, "HTTP/1.0".*))) => Version{ .major = 1, .minor = 0, .patch = 0 },
+                        @as(u64, @bitCast(@as([8]u8, "HTTP/1.1".*))) => Version{ .major = 1, .minor = 1, .patch = 0 },
                         else => return error.InvalidStatusLine,
                     };
 
@@ -177,7 +177,7 @@ pub fn ResponseParser(comptime Reader: type) type {
                             return Event.end;
                         },
                         .content_length => {
-                            const left = math.min(self.read_needed - self.read_current, self.read_buffer.len);
+                            const left = @min(self.read_needed - self.read_current, self.read_buffer.len);
                             const read = try self.reader.read(self.read_buffer[0..left]);
 
                             self.read_current += read;
@@ -217,7 +217,7 @@ pub fn ResponseParser(comptime Reader: type) type {
                                 }
                             }
 
-                            const left = math.min(self.read_needed - self.read_current, self.read_buffer.len);
+                            const left = @min(self.read_needed - self.read_current, self.read_buffer.len);
                             const read = try self.reader.read(self.read_buffer[0..left]);
 
                             self.read_current += read;
