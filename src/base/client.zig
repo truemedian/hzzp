@@ -238,7 +238,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             }
 
             const start = self.payload_index;
-            const size = std.math.min(buffer.len, self.payload_size - start);
+            const size = @min(buffer.len, self.payload_size - start);
             const end = start + size;
 
             mem.copy(u8, buffer[0..size], self.read_buffer[start..end]);
