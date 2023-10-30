@@ -1,0 +1,11 @@
+.{
+    .name = "hzzp",
+    .version = "0.0.1",
+
+    .paths = .{
+        "build.zig.zon",
+        "build.zig",
+        "LICENSE",
+        "src",
+    },
+}
