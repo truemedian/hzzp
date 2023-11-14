@@ -15,33 +15,58 @@ pub const Version = enum {
 };
 
 /// HTTP method
-pub const Method = struct {
-    buffer: [24]u8,
+pub const Method = enum(u256) {
+    GET = parse("GET"),
+    HEAD = parse("HEAD"),
+    POST = parse("POST"),
+    PUT = parse("PUT"),
+    DELETE = parse("DELETE"),
+    CONNECT = parse("CONNECT"),
+    OPTIONS = parse("OPTIONS"),
+    TRACE = parse("TRACE"),
+    PATCH = parse("PATCH"),
 
-    pub fn init(comptime name: @Type(.EnumLiteral)) Method {
-        return comptime fromSlice(@tagName(name));
+    _,
+
+    /// Converts `s` into a type that may be used as a `Method` field.
+    /// Asserts that `s` is 32 or fewer bytes.
+    pub fn parse(s: []const u8) u256 {
+        var x: u256 = 0;
+        const len = @min(s.len, @sizeOf(@TypeOf(x)));
+        @memcpy(std.mem.asBytes(&x)[0..len], s[0..len]);
+        return x;
     }
 
-    pub fn fromSlice(str: []const u8) Method {
-        var method: Method = undefined;
-        assert(str.len <= method.buffer.len);
-
-        @memcpy(method.buffer[0..str.len], str);
-        if (str.len < method.buffer.len) {
-            method.buffer[str.len] = 0;
-        }
-
-        return method;
+    pub fn write(self: Method, w: anytype) !void {
+        const bytes = std.mem.asBytes(&@intFromEnum(self));
+        const str = std.mem.sliceTo(bytes, 0);
+        try w.writeAll(str);
     }
 
-    pub fn slice(self: *const Method) []const u8 {
-        const len = std.mem.indexOfScalar(u8, &self.buffer, 0) orelse self.buffer.len;
-        return self.buffer[0..len];
+    pub fn format(value: Method, comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) @TypeOf(writer).Error!void {
+        return try value.write(writer);
     }
 
-    pub fn equals(self: Method, other: Method) bool {
-        return ascii.eqlIgnoreCase(self.slice(), other.slice());
+    /// Returns true if a request of this method is allowed to have a body
+    /// Actual behavior from servers may vary and should still be checked
+    pub fn requestHasBody(self: Method) bool {
+        return switch (self) {
+            .POST, .PUT, .PATCH => true,
+            .GET, .HEAD, .DELETE, .CONNECT, .OPTIONS, .TRACE => false,
+            else => true,
+        };
     }
+
+    /// Returns true if a response to this method is allowed to have a body
+    /// Actual behavior from clients may vary and should still be checked
+    pub fn responseHasBody(self: Method) bool {
+        return switch (self) {
+            .GET, .POST, .DELETE, .CONNECT, .OPTIONS, .PATCH => true,
+            .HEAD, .PUT, .TRACE => false,
+            else => true,
+        };
+    }
+
 };
 
 pub const HeaderList = std.ArrayListUnmanaged(Field);
@@ -54,8 +79,7 @@ pub const HeaderIndexItem = union(enum) {
 pub const HeaderIndex = std.HashMapUnmanaged([]const u8, HeaderIndexItem, CaseInsensitiveStringContext, std.hash_map.default_max_load_percentage);
 
 pub const CaseInsensitiveStringContext = struct {
-    pub fn hash(self: @This(), s: []const u8) u64 {
-        _ = self;
+    pub fn hash(_: @This(), s: []const u8) u64 {
         var buf: [64]u8 = undefined;
         var i: usize = 0;
 
@@ -72,26 +96,26 @@ pub const CaseInsensitiveStringContext = struct {
         return h.final();
     }
 
-    pub fn eql(self: @This(), a: []const u8, b: []const u8) bool {
+    pub fn eql(_: @This(), a: []const u8, b: []const u8) bool {
         if (a.ptr == b.ptr and a.len == b.len) return true;
 
-        _ = self;
         return ascii.eqlIgnoreCase(a, b);
     }
 };
 
+/// A HTTP header field. This consists of a case-insensitive name and a value.
 pub const Field = struct {
     name: []const u8,
     value: []const u8,
 
-    fn lessThan(ctx: void, a: Field, b: Field) bool {
-        _ = ctx;
+    fn lessThan(_: void, a: Field, b: Field) bool {
         if (a.name.ptr == b.name.ptr) return false;
 
         return ascii.lessThanIgnoreCase(a.name, b.name);
     }
 };
 
+/// An indexed list of HTTP headers.
 pub const Headers = struct {
     allocator: std.mem.Allocator,
     list: HeaderList = .{},
@@ -257,6 +281,7 @@ pub const Headers = struct {
         }
     }
 
+    /// Sorts the list of headers lexicographically by name.
     pub fn sort(h: *Headers) void {
         std.mem.sortUnstable(Field, h.list.items, {}, Field.lessThan);
         h.rebuildIndex();
@@ -326,10 +351,9 @@ pub const Headers = struct {
     pub fn format(
         h: Headers,
         comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
+        _: std.fmt.FormatOptions,
         w: anytype,
     ) @TypeOf(w).Error!void {
-        _ = options;
         _ = fmt;
 
         for (h.list.items) |entry| {
