@@ -5,15 +5,15 @@ pub const Context = struct {
     ca_bundle: std.crypto.Certificate.Bundle = .{},
 
     pub fn init(ctx: *Context) !void {
-        _ = ctx;
+        ctx.ca_bundle = .{};
     }
 
     pub fn deinit(ctx: *Context, allocator: std.mem.Allocator) void {
         ctx.ca_bundle.deinit(allocator);
     }
 
-    pub fn rescan(ctx: *Context, allocator: std.mem.Allocator) void {
-        ctx.ca_bundle.rescan(allocator);
+    pub fn rescan(ctx: *Context, allocator: std.mem.Allocator) !void {
+        try ctx.ca_bundle.rescan(allocator);
     }
 };
 

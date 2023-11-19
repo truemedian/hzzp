@@ -1,7 +1,7 @@
 const std = @import("std");
 
-const TlsImpl = @import("tls/openssl.zig");
-const TlsClient = if (TlsImpl == void) void else TlsImpl.Client;
+pub const TlsImpl = @import("tls/std.zig");
+pub const TlsClient = if (TlsImpl == void) void else TlsImpl.Client;
 
 const Connection = @This();
 

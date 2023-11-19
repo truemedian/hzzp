@@ -16,6 +16,7 @@ pub const Context = struct {
     pub fn init(ctx: *Context) !void {
         const method = c.TLS_client_method() orelse return error.TlsInitializationFailed;
         ctx.ctx = c.SSL_CTX_new(method) orelse return error.TlsInitializationFailed;
+        _ = c.SSL_CTX_set_min_proto_version(ctx.ctx, c.TLS1_2_VERSION);
     }
 
     pub fn deinit(ctx: *Context, allocator: std.mem.Allocator) void {
@@ -23,9 +24,9 @@ pub const Context = struct {
         c.SSL_CTX_free(ctx.ctx);
     }
 
-    pub fn rescan(ctx: *Context, allocator: std.mem.Allocator) void {
+    pub fn rescan(ctx: *Context, allocator: std.mem.Allocator) !void {
         _ = allocator;
-        c.SSL_CTX_use_certificate_chain_file(ctx.ctx, "/etc/ssl/certs/ca-certificates.crt");
+        _ = c.SSL_CTX_use_certificate_chain_file(ctx.ctx, "/etc/ssl/certs/ca-certificates.crt");
     }
 };
 
@@ -34,7 +35,7 @@ pub fn init(stream: std.net.Stream, ctx: *Context, host: [:0]const u8) !Client {
 
     client.fatally_closed = false;
     client.ssl = c.SSL_new(ctx.ctx) orelse return error.TlsInitializationFailed;
-    errdefer c.SSL_free(client);
+    errdefer c.SSL_free(client.ssl);
 
     if (c.SSL_set_tlsext_host_name(client.ssl, host) != 1) {
         return error.TlsInitializationFailed;
@@ -69,7 +70,10 @@ pub fn readv(client: *Client, stream: std.net.Stream, iovecs: []std.os.iovec) Re
             c.SSL_ERROR_WANT_READ => continue,
             c.SSL_ERROR_WANT_WRITE => continue,
             c.SSL_ERROR_ZERO_RETURN => return 0,
-            c.SSL_ERROR_SSL => return error.TlsFailure,
+            c.SSL_ERROR_SSL => {
+                c.ERR_print_errors_fp(c.stderr);
+                return error.TlsFailure;
+            },
             c.SSL_ERROR_SYSCALL => {
                 client.fatally_closed = true;
                 if (c.ERR_get_error() == 0) {

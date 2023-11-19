@@ -78,7 +78,7 @@ pub const Parser = struct {
         }
     };
 
-    state: State,
+    state: State = .ground,
 
     /// The buffer for the message body.
     header_bytes: std.ArrayListUnmanaged(u8) = .{},
@@ -91,6 +91,24 @@ pub const Parser = struct {
 
     /// The length of the next (or only) chunk of the body.
     next_chunk_length: u64 = 0,
+
+    /// Initializes the parser with a dynamically growing header buffer of up to `max` bytes.
+    pub fn initDynamic(max: usize) Parser {
+        return .{
+            .header_bytes = .{},
+            .header_bytes_max = max,
+            .header_bytes_dynamic = true,
+        };
+    }
+
+    /// Initializes the parser with a provided buffer `buf`.
+    pub fn initStatic(buf: []u8) Parser {
+        return .{
+            .header_bytes = .{ .items = buf[0..0], .capacity = buf.len },
+            .header_bytes_max = buf.len,
+            .header_bytes_dynamic = false,
+        };
+    }
 
     inline fn mixState(s: State, c: u8) u16 {
         return @as(u16, @intFromEnum(s)) | c;
@@ -119,6 +137,61 @@ pub const Parser = struct {
         assert(p.state.isChunkedHeaders());
 
         return findChunkedLen(p, bytes);
+    }
+
+    pub const ReadError = error{InvalidChunkedEncoding} || Connection.ReadError;
+
+    pub fn read(p: *Parser, c: *Connection, buffer: []u8) ReadError!usize {
+        assert(!p.state.isHeaders());
+
+        var out_index: usize = 0;
+        while (true) switch (p.state) {
+            .done => return out_index,
+            .invalid => unreachable,
+            .ground, .seen_r, .seen_n, .seen_rn, .seen_rnr => unreachable,
+            .chunk_data_suffix, .chunk_data_suffix_r, .chunk_head_size, .chunk_head_ext, .chunk_head_r => {
+                try c.fill();
+
+                const i = p.processChunkedLen(c.peek());
+                c.drop(@intCast(i));
+
+                if (p.state == .invalid) return error.InvalidChunkedEncoding;
+            },
+            .chunk_data, .finished => {
+                const data_avail = p.next_chunk_length;
+                const out_avail = buffer.len - out_index;
+
+                const can_read: u32 = @intCast(@min(data_avail, out_avail, std.math.maxInt(u32)));
+                const nread = try c.read(buffer[out_index .. out_index + can_read]);
+
+                p.next_chunk_length -= nread;
+                out_index += nread;
+
+                if (p.next_chunk_length == 0) switch (p.state) {
+                    .chunk_data => {
+                        p.state = .chunk_data_suffix;
+                        continue;
+                    },
+                    .finished => p.state = .done,
+                    else => unreachable,
+                };
+
+                return out_index;
+            },
+        };
+    }
+
+    pub const WaitForHeadersError = error{HeadersExceededLimit} || std.mem.Allocator.Error || Connection.ReadError;
+
+    pub fn waitForHeaders(p: *Parser, allocator: std.mem.Allocator, c: *Connection) WaitForHeadersError!void {
+        assert(p.state.isHeaders());
+
+        while (p.state.isHeaders()) {
+            try c.fill();
+
+            const i = try p.processHeaders(allocator, c.peek());
+            c.drop(@intCast(i));
+        }
     }
 
     pub fn findHeadersEnd(p: *Parser, bytes: []const u8) u32 {
@@ -288,9 +361,44 @@ pub const Parser = struct {
 };
 
 pub const Request = struct {
+    pub const State = enum {
+        start, // nothing has been sent, writing the headers
+        payload, // headers have been sent, writing the body
+        finished, // headers and payload have been sent, client side is done
+    };
+
+    pub const Compression = union(enum) {
+        pub const Deflate = std.compress.deflate.Compressor(PlainWriter);
+
+        identity,
+        deflate: Deflate,
+    };
+
     connection: *Connection,
 
+    compression: Compression = .identity,
     content_length: ContentLength = .none,
+    state: State = .start,
+
+    pub const SetCompressionError = error{UnsupportedTransferEncoding} || std.mem.Allocator.Error;
+
+    pub fn setCompression(req: *Request, allocator: std.mem.Allocator, compression: std.meta.Tag(Compression)) SetCompressionError!void {
+        assert(req.state == .start);
+
+        if (compression != .identity and req.content_length != .chunked) {
+            return error.UnsupportedTransferEncoding; // Compression is only supported with chunked messages.
+        }
+
+        if (compression != req.compression) switch (req.compression) {
+            .identity => {},
+            .deflate => req.compression.deflate.deinit(),
+        };
+
+        req.compression = switch (compression) {
+            .identity => .identity,
+            .deflate => .{ .deflate = try std.compress.deflate.compressor(allocator, req.plainWriter(), .{}) },
+        };
+    }
 
     pub const SendOptions = struct {
         uri: std.Uri,
@@ -300,15 +408,12 @@ pub const Request = struct {
         headers: http.Headers,
     };
 
-    pub const SendError = Connection.WriteError || error{
-        UnsupportedTransferEncoding,
-        MismatchedTransferEncoding,
-        InvalidContentLength,
-        MismatchedContentLength,
-    };
+    pub const SendError = Connection.WriteError || error{UnsupportedTransferEncoding};
 
     /// Send the HTTP request headers to the server.
     pub fn send(req: *Request, options: SendOptions) SendError!void {
+        assert(req.state == .start);
+
         const proxied = false; // TODO: figure out where the proxied field should go
 
         if (!options.method.requestHasBody() and !req.content_length.isEmpty()) {
@@ -354,55 +459,28 @@ pub const Request = struct {
         }
 
         if (!options.headers.contains("accept-encoding")) {
-            try w.writeAll("Accept-Encoding: gzip, deflate, zstd\r\n");
+            // try w.writeAll("Accept-Encoding: gzip, deflate, zstd\r\n");
         }
 
         if (!options.headers.contains("te")) {
-            try w.writeAll("TE: gzip, deflate\r\n");
+            // try w.writeAll("TE: gzip, deflate\r\n");
         }
 
-        const transfer_encoding = options.headers.getFirstValue("transfer-encoding");
-        const content_length = options.headers.getFirstValue("content-length");
+        if (options.headers.contains("transfer-encoding") or options.headers.contains("content-length")) {
+            return error.UnsupportedTransferEncoding; // These headers are not allowed to be set by the user. They are set automatically.
+        }
 
-        if (transfer_encoding) |coding| {
-            if (!options.method.requestHasBody()) {
-                return error.UnsupportedTransferEncoding; // This method isn't allowed to have a body, this content length implies content.
-            }
-
-            if (std.mem.eql(u8, coding, "chunked")) {
-                if (!req.content_length.isEmpty()) {
-                    return error.MismatchedTransferEncoding; // The value of the transfer-encoding header doesn't match the request field.
-                }
-
-                req.content_length = .chunked;
-            } else {
-                return error.UnsupportedTransferEncoding; // We don't support any other transfer encodings.
-            }
-        } else if (content_length) |length_str| {
-            const length = std.fmt.parseUnsigned(u64, length_str, 10) catch return error.InvalidContentLength;
-            if (length != @intFromEnum(req.content_length)) {
-                return error.MismatchedContentLength; // The value of the content-length header doesn't match the request field.
-            }
-
-            if (length > 0) {
-                if (!options.method.requestHasBody()) {
-                    return error.UnsupportedTransferEncoding; // This method isn't allowed to have a body, this content length implies content.
-                }
-
-                req.content_length = ContentLength.fromInt(length);
-            } else {
-                req.content_length = .none;
-            }
-        } else {
-            switch (req.content_length) {
-                .none => {},
-                .chunked => try w.writeAll("Transfer-Encoding: chunked\r\n"),
-                else => {
-                    try w.writeAll("Content-Length: ");
-                    try std.fmt.formatInt(@intFromEnum(req.content_length), 10, .lower, .{}, w);
-                    try w.writeAll("\r\n");
-                },
-            }
+        switch (req.content_length) {
+            .none => {},
+            .chunked => switch (req.compression) {
+                .identity => try w.writeAll("Transfer-Encoding: chunked\r\n"),
+                .deflate => try w.writeAll("Transfer-Encoding: deflate, chunked\r\n"),
+            },
+            else => {
+                try w.writeAll("Content-Length: ");
+                try std.fmt.formatInt(@intFromEnum(req.content_length), 10, .lower, .{}, w);
+                try w.writeAll("\r\n");
+            },
         }
 
         for (options.headers.list.items) |entry| {
@@ -419,17 +497,21 @@ pub const Request = struct {
         try w.writeAll("\r\n");
 
         try req.connection.flush();
+        req.state = .payload;
     }
 
-    pub const WriteError = Connection.WriteError || error{ NotWritable, MessageTooLong };
+    const PlainWriteError = Connection.WriteError || error{ NotWritable, MessageTooLong };
 
-    pub fn write(req: *Request, data: []const u8) WriteError!usize {
+    /// Write data to the request body without any compression.
+    fn plainWrite(req: *Request, data: []const u8) PlainWriteError!usize {
+        assert(req.state == .payload);
+
         const w = req.connection.writer();
 
         switch (req.content_length) {
             .none => return error.NotWritable,
             .chunked => {
-                try std.fmt.formatInt(@intCast(data.len), 16, .lower, .{}, w);
+                try std.fmt.formatInt(data.len, 16, .lower, .{}, w);
                 try w.writeAll("\r\n");
                 try w.writeAll(data);
                 try w.writeAll("\r\n");
@@ -437,7 +519,7 @@ pub const Request = struct {
                 return data.len;
             },
             else => {
-                if (data.len > @intFromEnum(req.content_length)) return error.MessageTooLong;
+                if (data.len > @intFromEnum(req.content_length)) return error.MessageTooLong; // The amount of data sent would exceed the content length reported to the server.
 
                 // Adjust the content length to account for the data written.
                 req.content_length = ContentLength.fromInt(@intFromEnum(req.content_length) - data.len);
@@ -448,23 +530,257 @@ pub const Request = struct {
         }
     }
 
+    const PlainWriter = std.io.Writer(*Request, PlainWriteError, plainWrite);
+
+    fn plainWriter(req: *Request) PlainWriter {
+        return .{ .context = req };
+    }
+
+    pub const WriteError = PlainWriteError || Compression.Deflate.Error;
+
+    /// Write data to the request body.
+    pub fn write(req: *Request, data: []const u8) WriteError!usize {
+        assert(req.state == .payload);
+
+        switch (req.compression) {
+            .identity => return try req.plainWrite(data),
+            .deflate => return try req.compression.deflate.write(data),
+        }
+    }
+
     pub const Writer = std.io.Writer(*Request, WriteError, write);
 
     pub fn writer(req: *Request) Writer {
         return .{ .context = req };
     }
 
-    pub const FinishError = Connection.WriteError || error{MessageNotComplete};
+    pub const FinishError = WriteError || error{MessageNotComplete};
 
+    /// Finish the request body.
     pub fn finish(req: *Request) FinishError!void {
+        assert(req.state == .payload);
+
         const w = req.connection.writer();
+
+        switch (req.compression) {
+            .identity => {},
+            .deflate => try req.compression.deflate.flush(),
+        }
 
         switch (req.content_length) {
             .chunked => try w.writeAll("0\r\n\r\n"),
-            else => if (!req.content_length.isEmpty()) return error.MessageNotComplete,
+            else => if (!req.content_length.isEmpty()) return error.MessageNotComplete, // We reported a content length to the server, but didn't write that much data.
         }
 
         try req.connection.flush();
+        req.state = .finished;
+    }
+
+    pub fn wait(req: *Request, allocator: std.mem.Allocator) Response.WaitError!Response {
+        var res: Response = .{
+            .allocator = allocator,
+            .connection = req.connection,
+            .parser = Parser.initDynamic(8192),
+            .headers = .{ .allocator = allocator },
+        };
+
+        try res.wait();
+        return res;
+    }
+};
+
+pub const Response = struct {
+    pub const State = enum {
+        start,
+        initializing,
+        payload,
+        closed,
+    };
+
+    pub const Decompression = union(enum) {
+        pub const Deflate = std.compress.deflate.Decompressor(PlainReader);
+        pub const Gzip = std.compress.gzip.Decompress(PlainReader);
+        pub const Zstd = std.compress.zstd.DecompressStream(PlainReader, .{});
+
+        identity,
+        gzip: Gzip,
+        deflate: Deflate,
+        zstd: Zstd,
+    };
+
+    allocator: std.mem.Allocator,
+    connection: *Connection,
+
+    parser: Parser,
+
+    status: http.Status = undefined,
+    reason: []const u8 = undefined,
+    headers: http.Headers,
+
+    decompression: Decompression = .identity,
+    content_length: ContentLength = .none,
+    state: State = .start,
+
+    pub const WaitOptions = struct {
+        wait_for_continue: bool = false,
+    };
+
+    pub const WaitError = error{ HeadersInvalid, UnsupportedTransferEncoding, DecompressionInitializationFailed } || std.mem.Allocator.Error || Parser.WaitForHeadersError;
+
+    fn int64(b: *const [8]u8) u64 {
+        const p: *align(1) const u64 = @ptrCast(b);
+        return p.*;
+    }
+
+    fn wait(res: *Response) WaitError!void {
+        try res.parser.waitForHeaders(res.allocator, res.connection);
+        const headers_bytes = res.parser.header_bytes.items;
+
+        var line_iterator = std.mem.tokenizeAny(u8, headers_bytes, "\r\n");
+
+        const first_line = line_iterator.next() orelse unreachable;
+        if (first_line.len < 13) return error.HeadersInvalid; // The first line must be at least 13 bytes long "HTTP/1.1 000 "
+
+        switch (int64(first_line[0..8])) {
+            int64("HTTP/1.1") => {},
+            else => return error.HeadersInvalid, // This is not a supported HTTP version
+        }
+
+        if (first_line[8] != ' ') return error.HeadersInvalid; // The status code must be separated from the version by a space.
+        const status_code = std.fmt.parseUnsigned(u64, first_line[9..12], 10) catch return error.HeadersInvalid; // The status code must be 3 digits.
+
+        if (first_line[12] != ' ') return error.HeadersInvalid; // The reason phrase must be separated from the status code by a space.
+        const reason = first_line[13..];
+
+        res.status = @enumFromInt(status_code);
+        res.reason = reason;
+
+        res.headers.clearRetainingCapacity();
+
+        while (line_iterator.next()) |line| {
+            var name_it = std.mem.tokenizeAny(u8, line, ": ");
+            const header_name = name_it.next() orelse return error.HeadersInvalid; // There is no `:` in the line.
+            const header_value = name_it.rest();
+
+            try res.headers.append(header_name, header_value);
+        }
+
+        const transfer_encoding = res.headers.getFirstValue("transfer-encoding");
+        const content_length = res.headers.getFirstValue("content-length");
+
+        var compression: std.meta.Tag(Decompression) = .identity;
+        if (transfer_encoding) |codings| {
+            var coding_it = std.mem.splitBackwardsScalar(u8, codings, ',');
+
+            const first = std.mem.trim(u8, coding_it.first(), " ");
+            if (std.ascii.eqlIgnoreCase(first, "chunked")) {
+                res.content_length = .chunked;
+
+                if (coding_it.next()) |second_untrimmed| {
+                    const second = std.mem.trim(u8, second_untrimmed, " ");
+
+                    if (std.meta.stringToEnum(@TypeOf(compression), second)) |decomp| {
+                        compression = decomp;
+                    } else {
+                        return error.UnsupportedTransferEncoding; // We don't support any other transfer encodings.
+                    }
+                }
+            } else if (std.meta.stringToEnum(@TypeOf(compression), first)) |decomp| {
+                compression = decomp;
+            } else {
+                return error.UnsupportedTransferEncoding; // We don't support any other transfer encodings.
+            }
+        } else if (content_length) |length_str| {
+            const length = std.fmt.parseUnsigned(u64, length_str, 10) catch return error.HeadersInvalid; // The content length must be a valid unsigned integer.
+
+            res.content_length = ContentLength.fromInt(length);
+        } else {
+            res.content_length = .none;
+        }
+
+        if (res.headers.getFirstValue("content-encoding")) |coding| {
+            if (compression != .identity) return error.HeadersInvalid; // We can only handle one compression at a time at the moment.
+            const trimmed = std.mem.trim(u8, coding, " ");
+
+            if (std.meta.stringToEnum(std.meta.Tag(Decompression), trimmed)) |decomp| {
+                compression = decomp;
+            } else {
+                return error.UnsupportedTransferEncoding; // We don't support any other content encodings.
+            }
+        }
+
+        switch (res.content_length) {
+            .none => {},
+            .chunked => res.parser.state = .chunk_head_size,
+            else => res.parser.next_chunk_length = @intFromEnum(res.content_length),
+        }
+
+        res.state = .initializing;
+
+        try setDecompression(res, res.allocator, compression);
+
+        res.state = .payload;
+    }
+
+    const SetDecompressionError = error{DecompressionInitializationFailed} || std.mem.Allocator.Error;
+
+    fn setDecompression(res: *Response, allocator: std.mem.Allocator, decompression: std.meta.Tag(Decompression)) SetDecompressionError!void {
+        assert(res.state == .initializing);
+
+        if (decompression != res.decompression) switch (res.decompression) {
+            .identity => {},
+            .deflate => res.decompression.deflate.deinit(),
+            .gzip => res.decompression.gzip.deinit(),
+            .zstd => res.decompression.zstd.deinit(),
+        };
+
+        res.decompression = switch (decompression) {
+            .identity => .identity,
+            .deflate => .{ .deflate = std.compress.deflate.decompressor(allocator, res.plainReader(), null) catch return error.DecompressionInitializationFailed },
+            .gzip => .{ .gzip = std.compress.gzip.decompress(allocator, res.plainReader()) catch return error.DecompressionInitializationFailed },
+            .zstd => .{ .zstd = std.compress.zstd.decompressStream(allocator, res.plainReader()) },
+        };
+    }
+
+    const PlainReadError = Parser.ReadError;
+
+    fn plainRead(res: *Response, buffer: []u8) PlainReadError!usize {
+        // TODO: this miscompiles? It's triggered when true is passed to the assert.
+        // assert(res.state == .payload or res.state == .initializing);
+
+        return res.parser.read(res.connection, buffer);
+    }
+
+    const PlainReader = std.io.Reader(*Response, PlainReadError, plainRead);
+
+    fn plainReader(res: *Response) PlainReader {
+        return .{ .context = res };
+    }
+
+    pub const ReadError = PlainReadError || Decompression.Gzip.Error || Decompression.Deflate.Error || Decompression.Zstd.Error;
+
+    /// Read data from the response body.
+    pub fn read(res: *Response, buffer: []u8) ReadError!usize {
+        assert(res.state == .payload);
+
+        switch (res.decompression) {
+            .identity => return try res.plainRead(buffer),
+            .deflate => return try res.decompression.deflate.read(buffer),
+            .gzip => return try res.decompression.gzip.read(buffer),
+            .zstd => return try res.decompression.zstd.read(buffer),
+        }
+    }
+
+    pub const Reader = std.io.Reader(*Response, ReadError, read);
+
+    pub fn reader(res: *Response) Reader {
+        return .{ .context = res };
+    }
+
+    pub fn close(res: *Response) void {
+        res.state = .closed;
+
+        res.connection.close();
     }
 };
 
