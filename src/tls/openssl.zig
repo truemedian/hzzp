@@ -2,10 +2,15 @@ const std = @import("std");
 
 const c = @cImport({
     @cInclude("openssl/ssl.h");
-    @cInclude("openssl/err.h");
 });
 
-pub const Client = struct {
+var openssl_init_once = std.once(initLibraryOnce);
+
+fn initLibraryOnce() void {
+    _ = c.OPENSSL_init_ssl(0, null);
+}
+
+pub const Stream = struct {
     ssl: *c.SSL,
     fatally_closed: bool,
 };
@@ -14,7 +19,9 @@ pub const Context = struct {
     ctx: *c.SSL_CTX,
 
     pub fn init(ctx: *Context) !void {
-        const method = c.TLS_client_method() orelse return error.TlsInitializationFailed;
+        openssl_init_once.call();
+
+        const method = c.TLS_method() orelse return error.TlsInitializationFailed;
         ctx.ctx = c.SSL_CTX_new(method) orelse return error.TlsInitializationFailed;
         _ = c.SSL_CTX_set_min_proto_version(ctx.ctx, c.TLS1_2_VERSION);
     }
@@ -30,8 +37,8 @@ pub const Context = struct {
     }
 };
 
-pub fn init(stream: std.net.Stream, ctx: *Context, host: [:0]const u8) !Client {
-    var client: Client = undefined;
+pub fn initClient(stream: std.net.Stream, ctx: *Context, host: [:0]const u8) !Stream {
+    var client: Stream = undefined;
 
     client.fatally_closed = false;
     client.ssl = c.SSL_new(ctx.ctx) orelse return error.TlsInitializationFailed;
@@ -49,6 +56,10 @@ pub fn init(stream: std.net.Stream, ctx: *Context, host: [:0]const u8) !Client {
         return error.TlsInitializationFailed;
     }
 
+    if (c.SSL_do_handshake(client.ssl) != 1) {
+        return error.TlsInitializationFailed;
+    }
+
     return client;
 }
 
@@ -59,7 +70,7 @@ const ReadError = error{
     ConnectionResetByPeer,
 };
 
-pub fn readv(client: *Client, stream: std.net.Stream, iovecs: []std.os.iovec) ReadError!usize {
+pub fn readv(client: *Stream, stream: std.net.Stream, iovecs: []std.os.iovec) ReadError!usize {
     _ = stream;
 
     while (true) {
@@ -71,19 +82,14 @@ pub fn readv(client: *Client, stream: std.net.Stream, iovecs: []std.os.iovec) Re
             c.SSL_ERROR_WANT_WRITE => continue,
             c.SSL_ERROR_ZERO_RETURN => return 0,
             c.SSL_ERROR_SSL => {
-                c.ERR_print_errors_fp(c.stderr);
                 return error.TlsFailure;
             },
             c.SSL_ERROR_SYSCALL => {
                 client.fatally_closed = true;
-                if (c.ERR_get_error() == 0) {
-                    switch (std.c.getErrno(-1)) {
-                        .TIMEDOUT => return error.ConnectionTimedOut,
-                        .CONNRESET => return error.ConnectionResetByPeer,
-                        else => return error.UnexpectedReadFailure,
-                    }
-                } else {
-                    return error.UnexpectedReadFailure;
+                switch (std.c.getErrno(-1)) {
+                    .TIMEDOUT => return error.ConnectionTimedOut,
+                    .CONNRESET => return error.ConnectionResetByPeer,
+                    else => return error.UnexpectedReadFailure,
                 }
             },
             else => {
@@ -100,7 +106,7 @@ const WriteError = error{
     ConnectionResetByPeer,
 };
 
-pub fn writevAll(client: *Client, stream: std.net.Stream, iovecs: []std.os.iovec_const) WriteError!void {
+pub fn writevAll(client: *Stream, stream: std.net.Stream, iovecs: []std.os.iovec_const) WriteError!void {
     _ = stream;
 
     loop: for (iovecs) |iovec| {
@@ -116,13 +122,9 @@ pub fn writevAll(client: *Client, stream: std.net.Stream, iovecs: []std.os.iovec
                 c.SSL_ERROR_SYSCALL => {
                     client.fatally_closed = true;
 
-                    if (c.ERR_get_error() == 0) {
-                        switch (std.c.getErrno(-1)) {
-                            .CONNRESET => return error.ConnectionResetByPeer,
-                            else => return error.UnexpectedWriteFailure,
-                        }
-                    } else {
-                        return error.UnexpectedWriteFailure;
+                    switch (std.c.getErrno(-1)) {
+                        .CONNRESET => return error.ConnectionResetByPeer,
+                        else => return error.UnexpectedWriteFailure,
                     }
                 },
                 else => {
@@ -134,7 +136,7 @@ pub fn writevAll(client: *Client, stream: std.net.Stream, iovecs: []std.os.iovec
     }
 }
 
-pub fn close(client: *Client, stream: std.net.Stream) void {
+pub fn close(client: *Stream, stream: std.net.Stream) void {
     _ = stream;
     if (!client.fatally_closed) {
         _ = c.SSL_shutdown(client.ssl);

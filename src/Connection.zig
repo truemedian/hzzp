@@ -1,7 +1,5 @@
 const std = @import("std");
-
-pub const TlsImpl = @import("tls/std.zig");
-pub const TlsClient = if (TlsImpl == void) void else TlsImpl.Client;
+const hzzp = @import("main.zig");
 
 const Connection = @This();
 
@@ -12,10 +10,13 @@ const BufferSize = std.math.IntFittingRange(0, buffer_size);
 stream: std.net.Stream,
 
 /// The TLS context for this connection. Will be undefined if this connection is not using TLS.
-tls: TlsClient = undefined,
+tls: hzzp.tls.Stream = undefined,
 
 /// Whether this connection is using TLS.
 is_tls: bool,
+
+/// Whether this connection can be kept alive.
+keep_alive: bool = false,
 
 /// The buffer used for buffering reads from the stream.
 read_buffer: [buffer_size]u8 = undefined,
@@ -30,17 +31,17 @@ pub const ReadError = error{ ConnectionTimedOut, ConnectionResetByPeer, Unexpect
 
 fn readvDirect(c: *Connection, iovecs: []std.os.iovec) ReadError!usize {
     if (c.is_tls) {
-        if (TlsImpl == void) unreachable;
+        if (hzzp.tls.Stream == void) unreachable;
 
-        if (@hasDecl(TlsImpl, "readv")) {
-            return TlsImpl.readv(&c.tls, c.stream, iovecs) catch |err| switch (err) {
+        if (@hasDecl(hzzp.tls, "readv")) {
+            return hzzp.tls.readv(&c.tls, c.stream, iovecs) catch |err| switch (err) {
                 error.ConnectionTimedOut => return error.ConnectionTimedOut,
                 error.ConnectionResetByPeer => return error.ConnectionResetByPeer,
                 else => return error.UnexpectedReadFailure,
             };
         } else {
             const iovec = iovecs[0];
-            return TlsImpl.read(&c.tls, c.stream, iovec.iov_base[0..iovec.iov_len]) catch |err| switch (err) {
+            return hzzp.tls.read(&c.tls, c.stream, iovec.iov_base[0..iovec.iov_len]) catch |err| switch (err) {
                 error.ConnectionTimedOut => return error.ConnectionTimedOut,
                 error.ConnectionResetByPeer, error.BrokenPipe => return error.ConnectionResetByPeer,
                 else => return error.UnexpectedReadFailure,
@@ -123,16 +124,16 @@ pub const WriteError = error{
 
 fn writevAllDirect(c: *Connection, iovecs: []std.os.iovec_const) WriteError!void {
     if (c.is_tls) {
-        if (TlsImpl == void) unreachable;
+        if (hzzp.tls.Stream == void) unreachable;
 
-        if (@hasDecl(TlsImpl, "writevAll")) {
-            TlsImpl.writevAll(&c.tls, c.stream, iovecs) catch |err| switch (err) {
+        if (@hasDecl(hzzp.tls, "writevAll")) {
+            return hzzp.tls.writevAll(&c.tls, c.stream, iovecs) catch |err| switch (err) {
                 error.ConnectionResetByPeer => return error.ConnectionResetByPeer,
                 else => return error.UnexpectedWriteFailure,
             };
         } else {
             for (iovecs) |iovec| {
-                TlsImpl.writeAll(&c.tls, c.stream, iovec.iov_base[0..iovec.io]) catch |err| switch (err) {
+                return hzzp.tls.writeAll(&c.tls, c.stream, iovec.iov_base[0..iovec.io]) catch |err| switch (err) {
                     error.ConnectionResetByPeer, error.BrokenPipe => return error.ConnectionResetByPeer,
                     else => return error.UnexpectedWriteFailure,
                 };
@@ -198,9 +199,9 @@ pub fn writer(c: *Connection) Writer {
 /// Close the connection. Will perform a TLS shutdown if the connection is using TLS.
 pub fn close(c: *Connection) void {
     if (c.is_tls) {
-        if (TlsImpl == void) unreachable;
+        if (hzzp.tls.Stream == void) unreachable;
 
-        TlsImpl.close(&c.tls, c.stream);
+        hzzp.tls.close(&c.tls, c.stream);
     }
 
     c.stream.close();

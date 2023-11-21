@@ -577,6 +577,8 @@ pub const Request = struct {
     }
 
     pub fn wait(req: *Request, allocator: std.mem.Allocator) Response.WaitError!Response {
+        assert(req.state == .finished);
+
         var res: Response = .{
             .allocator = allocator,
             .connection = req.connection,
