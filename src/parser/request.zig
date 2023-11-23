@@ -259,10 +259,10 @@ fn testNextField(parser: anytype, expected: ?Event) !void {
 
 test "decodes a simple request" {
     var read_buffer: [32]u8 = undefined;
-    var request = "GET / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 4\r\n\r\ngood";
+    const request = "GET / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 4\r\n\r\ngood";
 
     var fbs = io.fixedBufferStream(request);
-    var reader = fbs.reader();
+    const reader = fbs.reader();
     var parser = create(&read_buffer, reader);
 
     try testNextField(&parser, .{
@@ -306,10 +306,10 @@ test "decodes a simple request" {
 
 test "decodes a simple chunked request" {
     var read_buffer: [32]u8 = undefined;
-    var request = "GET / HTTP/1.1\r\nHost: localhost\r\nTransfer-Encoding: chunked\r\n\r\n4\r\ngood\r\n0\r\n";
+    const request = "GET / HTTP/1.1\r\nHost: localhost\r\nTransfer-Encoding: chunked\r\n\r\n4\r\ngood\r\n0\r\n";
 
     var fbs = io.fixedBufferStream(request);
-    var reader = fbs.reader();
+    const reader = fbs.reader();
     var parser = create(&read_buffer, reader);
 
     try testNextField(&parser, .{
@@ -353,10 +353,10 @@ test "decodes a simple chunked request" {
 
 test "decodes a simple chunked request with trailer" {
     var read_buffer: [32]u8 = undefined;
-    var request = "GET / HTTP/1.1\r\nHost: localhost\r\nTrailer: Expires\r\nTransfer-Encoding: chunked\r\n\r\n4\r\ngood\r\n0\r\nExpires: now\r\n\r\n";
+    const request = "GET / HTTP/1.1\r\nHost: localhost\r\nTrailer: Expires\r\nTransfer-Encoding: chunked\r\n\r\n4\r\ngood\r\n0\r\nExpires: now\r\n\r\n";
 
     var fbs = io.fixedBufferStream(request);
-    var reader = fbs.reader();
+    const reader = fbs.reader();
     var parser = create(&read_buffer, reader);
 
     try testNextField(&parser, .{
