@@ -8,7 +8,7 @@ const math = std.math;
 const fmt = std.fmt;
 const mem = std.mem;
 
-const Version = std.builtin.Version;
+const Version = std.SemanticVersion;
 const assert = std.debug.assert;
 
 pub const StatusEvent = struct {
@@ -90,6 +90,7 @@ pub fn RequestParser(comptime Reader: type) type {
             InvalidHeader,
             InvalidEncodingHeader,
             InvalidChunkedPayload,
+            NoSpaceLeft,
         } || Reader.Error;
         pub fn next(self: *Self) NextError!?Event {
             if (self.done) return null;
@@ -106,14 +107,16 @@ pub fn RequestParser(comptime Reader: type) type {
                     const http_version_buffer = line_it.next() orelse return error.InvalidStatusLine;
 
                     if (http_version_buffer.len != 8) return error.InvalidStatusLine;
-
-                    // This is cursed, but reading a u64 is faster than comparing a string
-                    const version_magic: *align(1) const u64 = @ptrCast(line.ptr);
-                    const version = switch (version_magic.*) {
-                        @as(u64, @bitCast("HTTP/1.0".*)) => Version{ .major = 1, .minor = 0 },
-                        @as(u64, @bitCast("HTTP/1.1".*)) => Version{ .major = 1, .minor = 1 },
-                        else => return error.InvalidStatusLine,
-                    };
+                    if (http_version_buffer[0] != 'H') return error.InvalidStatusLine;
+                    if (http_version_buffer[1] != 'T') return error.InvalidStatusLine;
+                    if (http_version_buffer[2] != 'T') return error.InvalidStatusLine;
+                    if (http_version_buffer[3] != 'P') return error.InvalidStatusLine;
+                    if (http_version_buffer[4] != '/') return error.InvalidStatusLine;
+                    if (http_version_buffer[5] != '1') return error.InvalidStatusLine;
+                    if (http_version_buffer[6] != '.') return error.InvalidStatusLine;
+                    if (http_version_buffer[7] < '0') return error.InvalidStatusLine;
+                    if (http_version_buffer[7] > '1') return error.InvalidStatusLine;
+                    const version = Version{ .major = 1, .minor = http_version_buffer[7] - '0', .patch = 0 };
 
                     self.request_version = version;
                     self.state = .header;
@@ -179,7 +182,7 @@ pub fn RequestParser(comptime Reader: type) type {
                             return Event.end;
                         },
                         .content_length => {
-                            const left = math.min(self.read_needed - self.read_current, self.read_buffer.len);
+                            const left = @min(self.read_needed - self.read_current, self.read_buffer.len);
                             const read = try self.reader.read(self.read_buffer[0..left]);
 
                             self.read_current += read;
@@ -219,7 +222,7 @@ pub fn RequestParser(comptime Reader: type) type {
                                 }
                             }
 
-                            const left = math.min(self.read_needed - self.read_current, self.read_buffer.len);
+                            const left = @min(self.read_needed - self.read_current, self.read_buffer.len);
                             const read = try self.reader.read(self.read_buffer[0..left]);
 
                             self.read_current += read;
@@ -251,7 +254,6 @@ const io = std.io;
 
 fn testNextField(parser: anytype, expected: ?Event) !void {
     const actual = try parser.next();
-
     try testing.expect(util.reworkedMetaEql(actual, expected));
 }
 
@@ -270,6 +272,7 @@ test "decodes a simple request" {
             .version = .{
                 .major = 1,
                 .minor = 1,
+                .patch = 0,
             },
         },
     });
@@ -316,6 +319,7 @@ test "decodes a simple chunked request" {
             .version = .{
                 .major = 1,
                 .minor = 1,
+                .patch = 0,
             },
         },
     });
@@ -362,6 +366,7 @@ test "decodes a simple chunked request with trailer" {
             .version = .{
                 .major = 1,
                 .minor = 1,
+                .patch = 0,
             },
         },
     });
