@@ -2,14 +2,16 @@ const std = @import("std");
 
 pub const log = std.log.scoped(.hzzp);
 
-pub const supported_versions = std.builtin.Version.Range{
+pub const supported_versions = std.SemanticVersion.Range{
     .min = .{
         .major = 1,
         .minor = 0,
+        .patch = 0,
     },
     .max = .{
         .major = 1,
         .minor = 1,
+        .patch = 0,
     },
 };
 

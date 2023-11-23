@@ -269,6 +269,7 @@ test "decodes a simple response" {
             .version = .{
                 .major = 1,
                 .minor = 1,
+                .patch = 0,
             },
             .code = 404,
             .reason = "Not Found",
@@ -315,6 +316,7 @@ test "decodes a simple chunked response" {
             .version = .{
                 .major = 1,
                 .minor = 1,
+                .patch = 0,
             },
             .code = 200,
             .reason = "Ok",
@@ -361,6 +363,7 @@ test "decodes a simple chunked response with trailer" {
             .version = .{
                 .major = 1,
                 .minor = 1,
+                .patch = 0,
             },
             .code = 200,
             .reason = "Ok",

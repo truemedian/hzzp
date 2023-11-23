@@ -15,14 +15,19 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    test_compile_step.setFilter(test_filter);
+    test_compile_step.filter = test_filter;
 
     const test_run_step = b.addRunArtifact(test_compile_step);
 
     const test_step = b.step("test", "Run all library tests");
     if (emit_docs) {
-        test_compile_step.emit_docs = .emit;
+        const docs = b.addInstallDirectory(.{
+            .source_dir = test_compile_step.getEmittedDocs(),
+            .install_dir = .prefix,
+            .install_subdir = "doc",
+        });
         test_step.dependOn(&test_compile_step.step);
+        test_step.dependOn(&docs.step);
     } else {
         test_step.dependOn(&test_run_step.step);
     }

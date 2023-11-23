@@ -298,6 +298,7 @@ test "decodes a simple response" {
             .version = .{
                 .major = 1,
                 .minor = 1,
+                .patch = 0,
             },
             .code = 404,
             .reason = "Not Found",
