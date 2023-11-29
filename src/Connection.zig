@@ -18,6 +18,9 @@ is_tls: bool,
 /// Whether this connection can be kept alive.
 keep_alive: bool = false,
 
+/// Whether this connection is open.
+closed: bool = false,
+
 /// The buffer used for buffering reads from the stream.
 read_buffer: [buffer_size]u8 = undefined,
 read_start: BufferSize = 0,
@@ -198,6 +201,8 @@ pub fn writer(c: *Connection) Writer {
 
 /// Close the connection. Will perform a TLS shutdown if the connection is using TLS.
 pub fn close(c: *Connection) void {
+    if (c.closed) return;
+
     if (c.is_tls) {
         if (hzzp.tls.Stream == void) unreachable;
 

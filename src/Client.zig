@@ -6,6 +6,12 @@ const hzzp = @import("main.zig");
 
 const Client = @This();
 
+const Request = protocol.http1.Request;
+const Response = protocol.http1.Response;
+const Parser = protocol.http1.Parser;
+
+const assert = std.debug.assert;
+
 pub const ConnectionPool = struct {
     pub const Node = struct {
         host: [:0]const u8,
@@ -156,6 +162,57 @@ pub const ConnectionPool = struct {
     }
 };
 
+pub const Transaction = struct {
+    allocator: std.mem.Allocator,
+    connection: *Connection,
+
+    request: Request = .{},
+    response: Response,
+
+    pub fn init(connection: *Connection, allocator: std.mem.Allocator) Transaction {
+        return .{
+            .allocator = allocator,
+            .connection = connection,
+            .request = .{},
+            .response = .{
+                .parser = Parser.initDynamic(8192),
+                .headers = .{ .allocator = allocator, .owned = false },
+            },
+        };
+    }
+
+    pub fn setCompression(transaction: *Transaction, compression: std.meta.Tag(Request.Compression)) Request.SetCompressionError!void {
+        return transaction.request.setCompression(transaction.connection, transaction.allocator, compression);
+    }
+
+    pub fn send(transaction: *Transaction, options: Request.SendOptions) Request.SendError!void {
+        return transaction.request.send(transaction.connection, options);
+    }
+
+    pub fn writer(transaction: *Transaction) Request.Writer {
+        return transaction.request.writer(transaction.connection);
+    }
+
+    pub fn finish(transaction: *Transaction) Request.FinishError!void {
+        return transaction.request.finish(transaction.connection);
+    }
+
+    pub fn wait(transaction: *Transaction) Response.WaitError!void {
+        assert(transaction.request.state == .finished);
+
+        return transaction.response.wait(transaction.connection, transaction.allocator);
+    }
+
+    pub fn reader(transaction: *Transaction) Response.Reader {
+        return transaction.response.reader(transaction.connection);
+    }
+
+    pub fn close(transaction: *Transaction) void {
+        transaction.response.close();
+        transaction.connection.close();
+    }
+};
+
 allocator: std.mem.Allocator,
 
 tls_context: hzzp.tls.Context,
@@ -181,10 +238,11 @@ const protocol_map = std.ComptimeStringMap(u16, .{
     .{ "https", 443 },
 });
 
-pub fn open(client: *Client, uri: std.Uri) !protocol.http1.Request {
+pub fn open(client: *Client, allocator: std.mem.Allocator, uri: std.Uri) !Transaction {
     const host = uri.host orelse return error.MissingHost;
     const port = uri.port orelse protocol_map.get(uri.scheme) orelse return error.MissingPort;
     const is_tls = std.ascii.eqlIgnoreCase(uri.scheme, "https");
 
-    return protocol.http1.Request{ .connection = try client.connection_pool.connect(client, host, port, is_tls) };
+    const conn = try client.connection_pool.connect(client, host, port, is_tls);
+    return Transaction.init(conn, allocator);
 }
