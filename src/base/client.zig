@@ -72,21 +72,21 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
         }
 
         // This makes interacting with URI parsers like Vexu/zuri much nicer, because you don't need to reconstruct the path.
-        pub fn writeStatusLineParts(self: *Self, method: []const u8, path: []const u8, query: ?[]const u8, fragment: ?[]const u8) Writer.Error!void {
+        pub fn writeStatusLineParts(self: *Self, method: []const u8, path: std.Uri.Component, query: ?std.Uri.Component, fragment: ?std.Uri.Component) (Writer.Error || std.mem.Allocator.Error)!void {
             assert(!self.head_finished);
 
             try self.writer.writeAll(method);
             try self.writer.writeAll(" ");
-            try self.writer.writeAll(path);
+            try self.writer.writeAll(try path.toRawMaybeAlloc(std.testing.failing_allocator));
 
             if (query) |qs| {
                 try self.writer.writeAll("?");
-                try self.writer.writeAll(qs);
+                try self.writer.writeAll(try qs.toRawMaybeAlloc(std.testing.failing_allocator));
             }
 
             if (fragment) |frag| {
                 try self.writer.writeAll("#");
-                try self.writer.writeAll(frag);
+                try self.writer.writeAll(try frag.toRawMaybeAlloc(std.testing.failing_allocator));
             }
 
             try self.writer.writeAll(" HTTP/1.1\r\n");
@@ -241,7 +241,7 @@ pub fn BaseClient(comptime Reader: type, comptime Writer: type) type {
             const size = @min(buffer.len, self.payload_size - start);
             const end = start + size;
 
-            mem.copy(u8, buffer[0..size], self.read_buffer[start..end]);
+            @memcpy(buffer[0..size], self.read_buffer[start..end]);
             self.payload_index = end;
 
             return size;
