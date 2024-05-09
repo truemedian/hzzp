@@ -1,5 +1,8 @@
 const std = @import("std");
 
+var filters: [1][]const u8 = undefined;
+var filters_len: usize = 0;
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -7,15 +10,19 @@ pub fn build(b: *std.Build) void {
     const emit_docs = b.option(bool, "emit-docs", "Build library documentation") orelse false;
 
     const module = b.addModule("hzzp", .{
-        .source_file = .{ .path = "src/main.zig" },
+        .root_source_file = b.path("src/main.zig"),
     });
 
     const test_compile_step = b.addTest(.{
-        .root_source_file = module.source_file,
+        .root_source_file = module.root_source_file.?,
         .target = target,
         .optimize = optimize,
     });
-    test_compile_step.filter = test_filter;
+    if (test_filter) |_| {
+        filters[0] = test_filter.?;
+        filters_len += 1;
+    }
+    test_compile_step.filters = filters[0..filters_len];
 
     const test_run_step = b.addRunArtifact(test_compile_step);
 
