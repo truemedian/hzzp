@@ -1,70 +1,18 @@
-const std = @import("std");
-
-pub const http1 = @import("protocol/http1.zig");
-pub const Headers = @import("Headers.zig");
-
-pub const Field = Headers.Field;
-
-/// HTTP version
 pub const Version = enum {
-    http1_0, // HTTP/1.0
-    http1, // HTTP/1.1
-    http2, // HTTP/2
+    @"HTTP/1.0",
+    @"HTTP/1.1",
 };
 
-/// HTTP method
-pub const Method = enum(u256) {
-    GET = parse("GET"),
-    HEAD = parse("HEAD"),
-    POST = parse("POST"),
-    PUT = parse("PUT"),
-    DELETE = parse("DELETE"),
-    CONNECT = parse("CONNECT"),
-    OPTIONS = parse("OPTIONS"),
-    TRACE = parse("TRACE"),
-    PATCH = parse("PATCH"),
-
-    _,
-
-    /// Converts `s` into a type that may be used as a `Method` field.
-    /// Asserts that `s` is 32 or fewer bytes.
-    pub fn parse(s: []const u8) u256 {
-        var x: u256 = 0;
-        const len = @min(s.len, @sizeOf(@TypeOf(x)));
-        @memcpy(std.mem.asBytes(&x)[0..len], s[0..len]);
-        return x;
-    }
-
-    pub fn write(self: Method, w: anytype) !void {
-        const bytes = std.mem.asBytes(&@intFromEnum(self));
-        const str = std.mem.sliceTo(bytes, 0);
-        try w.writeAll(str);
-    }
-
-    pub fn format(value: Method, comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) @TypeOf(writer).Error!void {
-        return try value.write(writer);
-    }
-
-    /// Returns true if a request of this method is allowed to have a body
-    /// Actual behavior from servers may vary and should still be checked
-    pub fn requestHasBody(self: Method) bool {
-        return switch (self) {
-            .POST, .PUT, .PATCH => true,
-            .GET, .HEAD, .DELETE, .CONNECT, .OPTIONS, .TRACE => false,
-            else => true,
-        };
-    }
-
-    /// Returns true if a response to this method is allowed to have a body
-    /// Actual behavior from clients may vary and should still be checked
-    pub fn responseHasBody(self: Method) bool {
-        return switch (self) {
-            .GET, .POST, .DELETE, .CONNECT, .OPTIONS, .PATCH => true,
-            .HEAD, .PUT, .TRACE => false,
-            else => true,
-        };
-    }
-
+pub const Method = enum {
+    GET,
+    HEAD,
+    POST,
+    PUT,
+    DELETE,
+    CONNECT,
+    OPTIONS,
+    TRACE,
+    PATCH,
 };
 
 /// https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
@@ -240,11 +188,29 @@ pub const Status = enum(u10) {
     }
 
     test {
-        try std.testing.expectEqual(@as(?Status.Class, Status.Class.success), Status.ok.class());
-        try std.testing.expectEqual(@as(?Status.Class, Status.Class.client_error), Status.not_found.class());
+        try std.testing.expectEqual(Status.Class.success, Status.ok.class());
+        try std.testing.expectEqual(Status.Class.client_error, Status.not_found.class());
     }
 };
 
-test {
-    std.testing.refAllDecls(@This());
-}
+pub const Header = struct {
+    name: []const u8,
+    value: []const u8,
+};
+
+/// The transfer encoding of a HTTP payload, either chunked or content-length.
+pub const TransferEncoding = enum(u64) {
+    /// The payload is encoded using the chunked transfer encoding.
+    chunked = std.math.maxInt(u64),
+
+    /// The payload is terminated by the closure of the connection.
+    close = std.math.maxInt(u64) - 1,
+
+    /// There is no payload.
+    none = 0,
+
+    /// The payload is encoded using this value as the content length.
+    _,
+};
+
+const std = @import("std");
